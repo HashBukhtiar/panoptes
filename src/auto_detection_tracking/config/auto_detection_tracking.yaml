@@ -1,0 +1,5 @@
+auto_detection_tracking:
+  ros__parameters:
+    # Webcam index ("0" = default camera) or a path to a video file, relative to where you run.
+    # Always a string, so it stays one ROS 2 parameter type for both.
+    source: "0"
