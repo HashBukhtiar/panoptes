@@ -1,0 +1,16 @@
+motion_control:
+  ros__parameters:
+    loop_rate_hz: 100.0
+
+    joint_names: ['joint1', 'joint2'] # TODO: update this to match the actual joint names
+    joint_min_rad: [-1.57, -1.57]
+    joint_max_rad: [1.57, 1.57]
+
+    max_speed_rad_s: 1.0 # maximum allowed speed in radians per second
+    max_accel_rad_s2: 3.0 # maximum allowed acceleration in radians per second squared
+
+    command_timeout_ms: 100.0 # how long before a command is considered stale
+    joint_state_timeout_ms: 100.0 # how long before a joint state is considered stale
+
+    following_error_rad: 0.09 # maximum allowed following error in radians
+    following_error_duration_ms: 500.0 # how long the following error must be exceeded before a fault is triggered
