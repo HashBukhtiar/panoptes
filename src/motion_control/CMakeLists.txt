@@ -8,6 +8,7 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(interfaces REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -21,6 +22,12 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-install(DIRECTORY config launch DESTINATION share/${PROJECT_NAME})
+add_executable(motion_control_node src/motion_control_node.cpp)
+target_link_libraries(motion_control_node PRIVATE
+  rclcpp::rclcpp
+  ${interfaces_TARGETS}
+)
+install(TARGETS motion_control_node DESTINATION lib/${PROJECT_NAME})
+install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
 
 ament_package()
