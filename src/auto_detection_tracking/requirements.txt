@@ -2,4 +2,6 @@
 opencv-python==5.0.0.93  # camera capture and the live window
 PyYAML==6.0.3            # reads config/auto_detection_tracking.yaml
 numpy==2.5.4             # comes with OpenCV; tests build synthetic frames with it
+ultralytics==8.4.202     # YOLO detector (AGPL-3.0, see ADT-3); pulls in torchvision
+torch==2.15.0            # runs the model; picks Apple's GPU (MPS) when available
 pytest==9.2.0            # tests

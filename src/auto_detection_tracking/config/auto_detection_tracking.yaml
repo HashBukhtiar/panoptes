@@ -3,3 +3,9 @@ auto_detection_tracking:
     # Webcam index ("0" = default camera) or a path to a video file, relative to where you run.
     # Always a string, so it stays one ROS 2 parameter type for both.
     source: "0"
+    # Pretrained COCO model (ADT-3). Replaced by our own trained weights in ADT-5.
+    model: "yolo26n.pt"
+    # Labels to detect. Stand-ins until the real instruments arrive (ADT-2).
+    classes: ["fork", "spoon", "knife"]
+    # Detections scoring below this are dropped.
+    min_score: 0.25

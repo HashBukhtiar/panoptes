@@ -4,6 +4,7 @@ Every object in ON_DESK must be visible for the whole clip, one of each.
 Frames are processed in memory only; nothing is saved (DI-22).
 
 Run from src/auto_detection_tracking/:
+    pip install transformers  # only this script needs it (RT-DETR); not in requirements.txt
     python scripts/compare_detectors.py CLIP [CLIP ...]
 """
 import sys

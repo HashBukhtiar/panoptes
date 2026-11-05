@@ -1,6 +1,6 @@
 # auto_detection_tracking
 
-Autonomous-mode vision: find the operator's selected instrument and keep it centred. So far (ADT-1) it opens a camera source and shows it live.
+Autonomous-mode vision: find the operator's selected instrument and keep it centred. So far it opens a camera source, shows it live (ADT-1), and boxes the configured objects with a pretrained YOLO model (ADT-3). Until the real instruments arrive, the configured objects are stand-ins: fork, spoon and knife.
 
 ## Setup (once, from the repo root)
 
@@ -17,7 +17,7 @@ cd src/auto_detection_tracking
 python -m auto_detection_tracking
 ```
 
-Pick the source in `config/auto_detection_tracking.yaml`: a webcam index (`"0"`) or a path to a video file. Relative paths are resolved from the folder you run in. Video files play at their own frame rate. Quit with `q`, `Esc`, or by closing the window.
+Pick the source in `config/auto_detection_tracking.yaml`: a webcam index (`"0"`) or a path to a video file. Relative paths are resolved from the folder you run in. Video files play at their own frame rate. The same file sets the model, which labels to box (`classes`), and the minimum score. The first run downloads the model weights into the folder you run from; `*.pt` files are gitignored. Quit with `q`, `Esc`, or by closing the window.
 
 The window is the camera-active indicator (DI-22): the camera is open only while the window is showing, and nothing is recorded.
 
