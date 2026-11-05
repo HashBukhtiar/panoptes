@@ -11,6 +11,10 @@ CLAUDE.md
 .venv/
 .pytest_cache/
 
+# Model weights (downloaded or trained, often large)
+*.pt
+*.onnx
+
 # DI-22: keep video out of git (it may show people)
 *.mp4
 *.avi
