@@ -17,7 +17,7 @@ cd src/auto_detection_tracking
 python -m auto_detection_tracking
 ```
 
-Pick the source in `config/auto_detection_tracking.yaml`: a webcam index (`"0"`) or a path to a video file. Relative paths are resolved from the folder you run in. Video files play at their own frame rate. The same file sets the model, which labels to box (`classes`), and the minimum score. The first run downloads the model weights into the folder you run from; `*.pt` files are gitignored. Quit with `q`, `Esc`, or by closing the window.
+Pick the source in `config/auto_detection_tracking.yaml`: a webcam index (`"0"`) or a path to a video file. To try a different source without editing the file, pass `--source`, e.g. `python -m auto_detection_tracking --source path/to/clip.mov`. Relative paths are resolved from the folder you run in. Video files play at their own frame rate. The same file sets the model, which labels to box (`classes`), and the minimum score. The first run downloads the model weights into the folder you run from; `*.pt` files are gitignored. Quit with `q`, `Esc`, or by closing the window.
 
 The window is the camera-active indicator (DI-22): the camera is open only while the window is showing, and nothing is recorded.
 

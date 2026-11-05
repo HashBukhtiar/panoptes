@@ -1,7 +1,8 @@
 """Show the configured camera source in a live window, with detections boxed.
 
-Run from src/auto_detection_tracking/:  python -m auto_detection_tracking
+Run from src/auto_detection_tracking/:  python -m auto_detection_tracking [--source SOURCE]
 """
+import argparse
 from contextlib import closing
 from pathlib import Path
 
@@ -24,13 +25,19 @@ def window_open():
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Show a camera source live with detections boxed.")
+    parser.add_argument("--source", help="webcam index or video file path; overrides the config")
+    args = parser.parse_args()
     params = yaml.safe_load(CONFIG.read_text())["auto_detection_tracking"]["ros__parameters"]
+    source = args.source or params["source"]
     # Load the model before opening the camera, so the camera isn't on while the model loads.
+    print(f"Loading {params['model']}...", flush=True)
     detect = detector.load(params["model"], params["classes"], params["min_score"])
+    print(f"Showing {source} in a new window (q or Esc to quit)", flush=True)
     # DI-22: the window is the camera-active indicator, so the camera is released before
     # the window closes, and closing the window stops the camera.
     try:
-        with closing(frames(params["source"])) as stream:
+        with closing(frames(source)) as stream:
             for _stamp_ns, image in stream:
                 for label, score, (x1, y1, x2, y2) in detect(image):
                     cv2.rectangle(image, (x1, y1), (x2, y2), GREEN, 2)
