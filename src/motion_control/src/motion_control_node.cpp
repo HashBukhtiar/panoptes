@@ -1,5 +1,7 @@
+#include <chrono>
 #include <cmath>
 #include <memory>
+#include <string>
 
 #include "interfaces/msg/camera_orientation_command.hpp"
 #include "interfaces/msg/joint_command.hpp"
@@ -20,8 +22,8 @@ class MotionControlNode : public rclcpp::Node {
             [this](const CameraOrientationCommand::SharedPtr msg) { on_camera_command(msg); });
 
         joint_sub_ = create_subscription<JointState>(
-            "joint_state",              /* name of the topic*/
-            rclcpp::QoS(10).reliable(), /* queue of up to 10 messages */
+            "joint_state",                /* name of the topic*/
+            rclcpp::QoS(1).best_effort(), /* queue of up to 1 message (keeps newest only) */
             [this](const JointState::SharedPtr msg) { on_joint_state(msg); });
 
         timer_ = create_wall_timer(std::chrono::duration<double>(1.0 / LOOP_RATE_HZ_),
@@ -45,7 +47,7 @@ class MotionControlNode : public rclcpp::Node {
     /**
      * Declares a parameter with the given name and fallback value, and returns its value.
      *
-     * @param name  The name of the parameter to declare and get.
+     * @param name      The name of the parameter to declare and get.
      * @param fallback  The fallback value to use if the parameter is not already declared.
      */
     double declare_and_get(const std::string& name, double fallback) {
@@ -56,7 +58,7 @@ class MotionControlNode : public rclcpp::Node {
     /**
      * Callback function for receiving camera orientation commands.
      *
-     * @param msg   The received CameraOrientationCommand message.
+     * @param msg       The received CameraOrientationCommand message.
      */
     void on_camera_command(const CameraOrientationCommand::SharedPtr msg) {
         kinematics::CameraOrientation orientation{msg->yaw, msg->pitch, msg->roll};
@@ -73,57 +75,63 @@ class MotionControlNode : public rclcpp::Node {
     /**
      * Callback function for receiving joint state messages.
      *
-     * @param msg   The received JointState message.
+     * @param msg       The received JointState message.
      */
     void on_joint_state(const JointState::SharedPtr msg) {
-        // Use the first received joint state as the initial position for trajectory generation
         if (joint_command_.position.empty()) {
-            joint_command_.position = msg->position;
+            joint_command_.position =
+                msg->position; /* use the first received joint state as the initial position for
+                                  trajectory generation */
             last_command_time_ = std::chrono::steady_clock::now();
         }
     }
 
     /**
-     * Generates the next joint position by moving toward the target
-     * at a fixed maximum velocity.
+     * Fraction of the remaining move that every joint may cover this tick, so all joints
+     * arrive together. 1.0 means the farthest joint can reach its target this tick.
      *
-     * @param curr  Current commanded joint position.
-     * @param target    Target joint position.
-     * @param max_velocity  Maximum movement velocity (rad/second).
-     * @param dt    Time since the previous update (seconds).
-     * @return  Next commanded joint position.
+     * @param max_step  Maximum movement allowed for the fastest-moving joint this tick (rad).
+     * @return          Scale in (0, 1].
      */
-    double compute_trajectory(double curr, double target, double max_velocity, double dt) {
-        double max_step = max_velocity * dt;
-        double error = target - curr;
-
-        // TODO: consider acceleration limit, and/or implement a more sophisticated trajectory
-        // generator (e.g., trapezoidal velocity profile)
-
-        if (std::abs(error) <= max_step) {
-            return target;
+    double compute_scale(double max_step) const {
+        double max_err = 0.0;
+        for (size_t i = 0; i < target_joint_angles_.size(); ++i) {
+            max_err =
+                std::max(max_err, std::abs(target_joint_angles_[i] - joint_command_.position[i]));
         }
-
-        return curr + std::copysign(max_step, error);
+        return (max_err > max_step) ? max_step / max_err : 1.0;
     }
 
     /**
-     * Computes the next joint command and sends it to the joint controller.
+     * Moves one joint toward its target by a fraction of its remaining error.
+     *
+     * @param curr      Current commanded joint position.
+     * @param target    Target joint position.
+     * @param scale     Fraction of the remaining error to cover this tick.
+     * @return          Next commanded joint position.
+     */
+    double compute_trajectory(double curr, double target, double scale) {
+        return curr + (target - curr) * scale;
+    }
+
+    /**
+     * Computes the next joint command and sends it to the joint controller at a fixed rate.
+     * This function is called periodically by a timer.
      */
     void compute_and_send_joint_command() {
-        if (target_joint_angles_.empty() || joint_command_.position.empty()) {
-            RCLCPP_INFO(get_logger(),
-                        "[MC] waiting for both camera orientation command and initial joint state");
-            return;
-        }
-
         auto now = std::chrono::steady_clock::now();
         double dt = std::chrono::duration<double>(now - last_command_time_).count();
         last_command_time_ = now;
 
+        if (target_joint_angles_.empty() || joint_command_.position.empty()) {
+            return;
+        }
+
+        double scale = compute_scale(MAX_SPEED_RAD_S_ * dt);
+
         for (size_t i = 0; i < target_joint_angles_.size(); ++i) {
-            joint_command_.position[i] = compute_trajectory(
-                joint_command_.position[i], target_joint_angles_[i], MAX_SPEED_RAD_S_, dt);
+            joint_command_.position[i] =
+                compute_trajectory(joint_command_.position[i], target_joint_angles_[i], scale);
         }
 
         // TODO: publish joint_command_ to the joint controller topic when it exists
