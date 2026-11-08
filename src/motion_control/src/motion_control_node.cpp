@@ -18,8 +18,9 @@ class MotionControlNode : public rclcpp::Node {
     rclcpp::Subscription<CameraOrientationCommand>::SharedPtr sub_;
 
     void on_command(const CameraOrientationCommand::SharedPtr msg) {
-        RCLCPP_INFO(get_logger(), "[MC] received camera orientation command: yaw=%f, pitch=%f",
-                    msg->yaw, msg->pitch);
+        RCLCPP_INFO(get_logger(),
+                    "[MC] received camera orientation command: yaw=%f, pitch=%f, roll=%f", msg->yaw,
+                    msg->pitch, msg->roll);
     }
 };
 
