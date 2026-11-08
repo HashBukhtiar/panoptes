@@ -6,6 +6,7 @@
 #include "interfaces/msg/camera_orientation_command.hpp"
 #include "interfaces/msg/joint_command.hpp"
 #include "kinematics/kinematics.hpp"
+#include "motion_control/trajectory.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
 
@@ -87,34 +88,6 @@ class MotionControlNode : public rclcpp::Node {
     }
 
     /**
-     * Fraction of the remaining move that every joint may cover this tick, so all joints
-     * arrive together. 1.0 means the farthest joint can reach its target this tick.
-     *
-     * @param max_step  Maximum movement allowed for the fastest-moving joint this tick (rad).
-     * @return          Scale in (0, 1].
-     */
-    double compute_scale(double max_step) const {
-        double max_err = 0.0;
-        for (size_t i = 0; i < target_joint_angles_.size(); ++i) {
-            max_err =
-                std::max(max_err, std::abs(target_joint_angles_[i] - joint_command_.position[i]));
-        }
-        return (max_err > max_step) ? max_step / max_err : 1.0;
-    }
-
-    /**
-     * Moves one joint toward its target by a fraction of its remaining error.
-     *
-     * @param curr      Current commanded joint position.
-     * @param target    Target joint position.
-     * @param scale     Fraction of the remaining error to cover this tick.
-     * @return          Next commanded joint position.
-     */
-    double compute_trajectory(double curr, double target, double scale) {
-        return curr + (target - curr) * scale;
-    }
-
-    /**
      * Computes the next joint command and sends it to the joint controller at a fixed rate.
      * This function is called periodically by a timer.
      */
@@ -127,11 +100,12 @@ class MotionControlNode : public rclcpp::Node {
             return;
         }
 
-        double scale = compute_scale(MAX_SPEED_RAD_S_ * dt);
+        double scale = trajectory::compute_scale(joint_command_.position, target_joint_angles_,
+                                                 MAX_SPEED_RAD_S_ * dt);
 
         for (size_t i = 0; i < target_joint_angles_.size(); ++i) {
-            joint_command_.position[i] =
-                compute_trajectory(joint_command_.position[i], target_joint_angles_[i], scale);
+            joint_command_.position[i] = trajectory::compute_trajectory(
+                joint_command_.position[i], target_joint_angles_[i], scale);
         }
 
         // TODO: publish joint_command_ to the joint controller topic when it exists

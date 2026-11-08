@@ -25,6 +25,8 @@ if(BUILD_TESTING)
 endif()
 
 add_executable(motion_control_node src/motion_control_node.cpp)
+target_include_directories(motion_control_node PRIVATE include)
+
 target_link_libraries(motion_control_node PRIVATE
   rclcpp::rclcpp
   ${interfaces_TARGETS}
