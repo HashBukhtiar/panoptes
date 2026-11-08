@@ -37,17 +37,16 @@ class MotionControlNode : public rclcpp::Node {
     rclcpp::TimerBase::SharedPtr timer_;
 
     kinematics::JointAngles
-        target_joint_angles_;     // Desired position from camera orientation command
-    JointCommand joint_command_;  // Last commanded sent to the joint controller
+        target_joint_angles_; /* target joint angles computed from the camera orientation command */
+    JointCommand joint_command_; /* last joint command sent to the joint controller */
     std::chrono::steady_clock::time_point last_command_time_ =
-        std::chrono::steady_clock::now();  // Time when the last command was sent
+        std::chrono::steady_clock::now(); /* timestamp of the last joint command sent */
 
     /**
      * Declares a parameter with the given name and fallback value, and returns its value.
-     * If the parameter is already declared, it simply returns its value.
      *
-     * @param name The name of the parameter to declare and get.
-     * @param fallback The fallback value to use if the parameter is not already declared.
+     * @param name  The name of the parameter to declare and get.
+     * @param fallback  The fallback value to use if the parameter is not already declared.
      */
     double declare_and_get(const std::string& name, double fallback) {
         declare_parameter(name, fallback);
@@ -57,24 +56,24 @@ class MotionControlNode : public rclcpp::Node {
     /**
      * Callback function for receiving camera orientation commands.
      *
-     * @param msg  The received CameraOrientationCommand message.
+     * @param msg   The received CameraOrientationCommand message.
      */
     void on_camera_command(const CameraOrientationCommand::SharedPtr msg) {
         kinematics::CameraOrientation orientation{msg->yaw, msg->pitch, msg->roll};
+
         auto joint_angles = kinematics::inverse_kinematics(orientation);
 
         if (joint_angles) {
             target_joint_angles_ = *joint_angles;
         } else {
-            RCLCPP_INFO(get_logger(),
-                        "[MC] failed to compute joint angles for the given orientation");
+            // TODO: handle appropriately
         }
     }
 
     /**
      * Callback function for receiving joint state messages.
      *
-     * @param msg  The received JointState message.
+     * @param msg   The received JointState message.
      */
     void on_joint_state(const JointState::SharedPtr msg) {
         // Use the first received joint state as the initial position for trajectory generation
@@ -88,11 +87,11 @@ class MotionControlNode : public rclcpp::Node {
      * Generates the next joint position by moving toward the target
      * at a fixed maximum velocity.
      *
-     * @param curr          Current commanded joint position.
-     * @param target        Target joint position.
+     * @param curr  Current commanded joint position.
+     * @param target    Target joint position.
      * @param max_velocity  Maximum movement velocity (rad/second).
-     * @param dt            Time since the previous update (seconds).
-     * @return              Next commanded joint position.
+     * @param dt    Time since the previous update (seconds).
+     * @return  Next commanded joint position.
      */
     double compute_trajectory(double curr, double target, double max_velocity, double dt) {
         double max_step = max_velocity * dt;
