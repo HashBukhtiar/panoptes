@@ -9,6 +9,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(interfaces REQUIRED)
+find_package(kinematics REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -26,6 +27,7 @@ add_executable(motion_control_node src/motion_control_node.cpp)
 target_link_libraries(motion_control_node PRIVATE
   rclcpp::rclcpp
   ${interfaces_TARGETS}
+  kinematics::kinematics
 )
 install(TARGETS motion_control_node DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
