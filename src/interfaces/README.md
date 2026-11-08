@@ -10,7 +10,7 @@ Message types for the pub/sub topics. Custom messages live in `msg/`. Standard R
 | joint command | `interfaces/msg/JointCommand` (custom) | motion-control -> actuator-driver |
 | joint state | `sensor_msgs/msg/JointState` (standard) | actuator-driver -> motion-control |
 | current camera image | `sensor_msgs/msg/Image` (standard) | camera-driver -> auto-detection-tracking, teleop-display |
-| target selection | TODO | auto-input -> auto-detection-tracking |
+| target selection | TODO, pub/sub might not be appropriate here | auto-input -> auto-detection-tracking |
 
 ## Conventions
 
