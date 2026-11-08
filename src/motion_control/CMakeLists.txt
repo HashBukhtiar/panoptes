@@ -36,4 +36,16 @@ target_link_libraries(motion_control_node PRIVATE
 install(TARGETS motion_control_node DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
 
+if(BUILD_TESTING)
+    find_package(ament_cmake_gtest REQUIRED)
+
+    ament_add_gtest(test_trajectory
+        test/test_trajectory.cpp
+    )
+
+    target_include_directories(test_trajectory PRIVATE
+        include
+    )
+endif()
+
 ament_package()
