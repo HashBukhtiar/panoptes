@@ -1,6 +1,6 @@
 # auto_detection_tracking
 
-Autonomous-mode vision: find the operator's selected instrument and keep it centred. So far it opens a camera source, shows it live (ADT-1), and boxes the configured objects with a pretrained YOLO model (ADT-3). Until the real instruments arrive, the configured objects are stand-ins: fork, spoon and knife.
+Autonomous-mode vision: find the operator's selected instrument and keep it centred. So far it opens a camera source, shows it live (ADT-1), and boxes the configured objects with a pretrained YOLO model (ADT-3), and lets you pick one as the target (ADT-6). Until the real instruments arrive, the configured objects are stand-ins: fork, spoon and knife.
 
 ## Setup (once, from the repo root)
 
@@ -10,14 +10,20 @@ source .venv/bin/activate
 pip install -r src/auto_detection_tracking/requirements.txt
 ```
 
-## Run
+## Run (every new terminal, from the repo root)
 
 ```bash
+source .venv/bin/activate
 cd src/auto_detection_tracking
-python -m auto_detection_tracking
+python -m auto_detection_tracking                                 # webcam
+python -m auto_detection_tracking --source path/to/clip.mov       # or a video file
 ```
 
-Pick the source in `config/auto_detection_tracking.yaml`: a webcam index (`"0"`) or a path to a video file. To try a different source without editing the file, pass `--source`, e.g. `python -m auto_detection_tracking --source path/to/clip.mov`. Relative paths are resolved from the folder you run in. Video files play at their own frame rate. The same file sets the model, which labels to box (`classes`), and the minimum score. The first run downloads the model weights into the folder you run from; `*.pt` files are gitignored. Quit with `q`, `Esc`, or by closing the window.
+Your prompt shows `(.venv)` once the environment is active. `ModuleNotFoundError: No module named 'cv2'` means it isn't: run the `source` line again. Already in `src/auto_detection_tracking`? Use `source ../../.venv/bin/activate` instead.
+
+Pick the source in `config/auto_detection_tracking.yaml`: a webcam index (`"0"`) or a path to a video file. To try a different source without editing the file, pass `--source`, e.g. `python -m auto_detection_tracking --source path/to/clip.mov`. Relative paths are resolved from the folder you run in. Video files play at their own frame rate. The same file sets the model, which labels to box (`classes`), and the minimum score. The first run downloads the model weights into the folder you run from; `*.pt` files are gitignored.
+
+Press `1`, `2` or `3` to make a class the target (in the order listed under `classes`), and `0` to clear it. The target gets a thick green box; other detected objects get thin grey boxes and are ignored (DI-8). If the target's class is boxed more than once, the highest score wins. Quit with `q`, `Esc`, or by closing the window.
 
 The window is the camera-active indicator (DI-22): the camera is open only while the window is showing, and nothing is recorded.
 

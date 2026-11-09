@@ -6,6 +6,7 @@ auto_detection_tracking:
     # Pretrained COCO model (ADT-3). Replaced by our own trained weights in ADT-5.
     model: "yolo26n.pt"
     # Labels to detect. Stand-ins until the real instruments arrive (ADT-2).
+    # Keys 1, 2, 3 in the window select them as the target, in this order.
     classes: ["fork", "spoon", "knife"]
     # Detections scoring below this are dropped.
     min_score: 0.25
