@@ -39,13 +39,23 @@ install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
 if(BUILD_TESTING)
     find_package(ament_cmake_gtest REQUIRED)
 
+    # pure math, no ROS needed
     ament_add_gtest(test_trajectory
         test/test_trajectory.cpp
     )
+    target_include_directories(test_trajectory PRIVATE include)
 
-    target_include_directories(test_trajectory PRIVATE
-        include
-    )
+    # node communication, uses the stubbed kinematics
+    # ament_add_gtest(test_motion_control_pubsub
+    #     test/test_motion_control_pubsub.cpp
+    #     test/stubs/stub_kinematics.cpp
+    # )
+    # target_include_directories(test_motion_control_pubsub PRIVATE include)
+    # target_link_libraries(test_motion_control_pubsub
+    #     rclcpp::rclcpp
+    #     ${sensor_msgs_TARGETS}
+    #     ${interfaces_TARGETS}
+    # )
 endif()
 
 ament_package()
