@@ -10,4 +10,4 @@ else
     colcon build --packages-up-to "$1" --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 fi
 
-echo "Build complete. To source the workspace, run: source scripts/setup.sh"
+echo "Build complete. If you added a new package, you must run 'source scripts/setup.sh' after to re-source your workspace"

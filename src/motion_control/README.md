@@ -13,8 +13,8 @@ ros2 run motion_control motion_control
 OR
 
 ```
-./build.sh
-./setup.sh
+source scripts/setup.sh
+./scripts/build.sh
 ros2 run motion_control motion_control
 ```
 
@@ -36,5 +36,6 @@ colcon test-result --verbose
 OR
 
 ```
-./test.sh
+source scripts/setup.sh
+./scripts/test.sh
 ```
