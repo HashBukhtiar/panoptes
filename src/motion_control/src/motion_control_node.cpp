@@ -1,7 +1,6 @@
 #include "motion_control/motion_control_node.hpp"
 
 #include "motion_control/trajectory.hpp"
-#include "rclcpp/rclcpp.hpp"
 
 MotionControlNode::MotionControlNode() : Node("motion_control") {
     camera_sub_ = create_subscription<CameraOrientationCommand>(
@@ -84,15 +83,4 @@ void MotionControlNode::compute_and_send_joint_command() {
 
     last_joint_command_.header.stamp = target_joint_angles_time_;
     joint_command_pub_->publish(last_joint_command_);
-}
-
-int main(int argc, char* argv[]) {
-    rclcpp::init(argc, argv);
-
-    auto logger = rclcpp::get_logger("main_logger");
-    RCLCPP_INFO(logger, "Initializing motion_control node...");
-    rclcpp::spin(std::make_shared<MotionControlNode>());
-
-    rclcpp::shutdown();
-    return 0;
 }

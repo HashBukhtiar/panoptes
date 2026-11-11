@@ -24,7 +24,7 @@ class MotionControlPubSubTest : public ::testing::Test {
 
     rclcpp::Publisher<CameraOrientationCommand>::SharedPtr camera_pub_;
     rclcpp::Publisher<JointState>::SharedPtr joint_state_pub_;
-    rclcpp::Subscription<JointCommand>::SharedPtr joint_command_pub_;
+    rclcpp::Subscription<JointCommand>::SharedPtr joint_command_sub_;
 
     std::vector<JointCommand> received_;
 
@@ -41,9 +41,9 @@ class MotionControlPubSubTest : public ::testing::Test {
 
         camera_pub_ = peer_node_->create_publisher<CameraOrientationCommand>(
             "camera_orientation_command", rclcpp::QoS(1).best_effort());
-        joint_state_pub =
-            peer_node->create_publisher<JointState>("joint_state", rclcpp::QoS(1).best_effort());
-        joint_command_sub = peer_node->create_subscriber<JointCommand>(
+        joint_state_pub_ =
+            peer_node_->create_publisher<JointState>("joint_state", rclcpp::QoS(1).best_effort());
+        joint_command_sub_ = peer_node_->create_subscription<JointCommand>(
             "joint_command", rclcpp::QoS(1).best_effort(),
             [this](const JointCommand::SharedPtr msg) { received_.push_back(*msg); });
 
@@ -56,20 +56,39 @@ class MotionControlPubSubTest : public ::testing::Test {
         }));
     }
 
+    bool spin_until(const std::function<bool()>& condition,
+                    std::chrono::milliseconds timeout = 2s) {
+        const auto start = std::chrono::steady_clock::now();
+
+        while (!condition()) {
+            const auto elapsed = std::chrono::steady_clock::now() - start;
+
+            if (elapsed >= timeout) {
+                return false;
+            }
+
+            executor_.spin_some(10ms);
+        }
+
+        return true;
+    }
+
     CameraOrientationCommand make_camera_command_msg() {
         CameraOrientationCommand msg;
-        msg.header.stamp = builtin_interfaces::msg::Time{123, 456};
+        msg.header.stamp.sec = 123;
+        msg.header.stamp.nanosec = 456;
         return msg;
     }
 
     JointState make_joint_state_msg() {
         JointState msg;
-        msg.position = {0.1, 0.2, 0.3};
+        msg.header.stamp.sec = 123;
+        msg.header.stamp.nanosec = 456;
         return msg;
     }
-}
+};
 
-TEST_F(MotionControlNodePubSubTest, PublishesJointCommandWithOriginalTimestamp) {
+TEST_F(MotionControlPubSubTest, PublishesJointCommandWithOriginalTimestamp) {
     const auto camera_command = make_camera_command_msg();
     const auto joint_state = make_joint_state_msg();
 
@@ -77,9 +96,9 @@ TEST_F(MotionControlNodePubSubTest, PublishesJointCommandWithOriginalTimestamp) 
         camera_pub_->publish(camera_command);
         joint_state_pub_->publish(joint_state);
         return !received_.empty();
-    }))
+    }));
 
     const auto& joint_command = received_.front();
-    EXPECT_EQ(joint_command_.header.stamp.sec, camera_command.header.stamp.sec);
-    EXPECT_EQ(joint_command_.header.stamp.nanosec, camera_command.header.stamp.nanosec);
+    EXPECT_EQ(joint_command.header.stamp.sec, camera_command.header.stamp.sec);
+    EXPECT_EQ(joint_command.header.stamp.nanosec, camera_command.header.stamp.nanosec);
 }
