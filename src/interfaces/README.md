@@ -15,7 +15,7 @@ Message types for the pub/sub topics. Custom messages live in `msg/`. Standard R
 
 - **Units:** radians
 - **Zero pose:** camera facing forward and level relative to the torso
-- **Timestamps:** commands are stamped when created; state is stamped when measured
+- **Timestamps:** `header.stamp` is the time of the originating motion (teleop: headset-reported time; auto: camera frame capture time)
 
 ## Look up a type
 
