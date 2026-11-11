@@ -10,3 +10,6 @@ auto_detection_tracking:
     classes: ["fork", "spoon", "knife"]
     # Detections scoring below this are dropped.
     min_score: 0.25
+    # Seconds the target can go undetected before it's reported lost; until then its last
+    # box is held. Placeholder value, to be tuned in the ADT-10 trials.
+    lost_after_s: 0.5
