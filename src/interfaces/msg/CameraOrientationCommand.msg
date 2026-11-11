@@ -5,5 +5,6 @@ uint8 MODE_TELEOP = 0
 uint8 MODE_SOURCE = 1
 
 bool is_absolute           # whether it is relative or absolute measurements
-float64 yaw                # left/right in rad, +ve for right
-float64 pitch              # up/down in rad, +ve for left
+float64 yaw                # rotation about z-axis (CCW = +ve), in rad
+float64 pitch              # rotation about y-axis (CCW = +ve), in rad
+float64 roll               # rotation about x-axis (CCW = +ve), in rad
