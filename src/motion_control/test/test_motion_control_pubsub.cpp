@@ -59,18 +59,18 @@ class MotionControlPubSubTest : public ::testing::Test {
     bool spin_until(const std::function<bool()>& condition,
                     std::chrono::milliseconds timeout = 2s) {
         const auto start = std::chrono::steady_clock::now();
-
         while (!condition()) {
             const auto elapsed = std::chrono::steady_clock::now() - start;
-
             if (elapsed >= timeout) {
                 return false;
             }
-
             executor_.spin_some(10ms);
         }
-
         return true;
+    }
+
+    void spin_for(std::chrono::milliseconds duration) {
+        spin_until([] { return false; }, duration);
     }
 
     CameraOrientationCommand make_camera_command_msg() {
@@ -84,6 +84,7 @@ class MotionControlPubSubTest : public ::testing::Test {
         JointState msg;
         msg.header.stamp.sec = 123;
         msg.header.stamp.nanosec = 456;
+        msg.position = {2.0, 2.0, 2.0};
         return msg;
     }
 };
@@ -101,4 +102,33 @@ TEST_F(MotionControlPubSubTest, PublishesJointCommandWithOriginalTimestamp) {
     const auto& joint_command = received_.front();
     EXPECT_EQ(joint_command.header.stamp.sec, camera_command.header.stamp.sec);
     EXPECT_EQ(joint_command.header.stamp.nanosec, camera_command.header.stamp.nanosec);
+}
+
+TEST_F(MotionControlPubSubTest, SeedsStartPositionWithJointState) {
+    const auto camera_command = make_camera_command_msg();
+    const auto joint_state = make_joint_state_msg();
+
+    ASSERT_TRUE(spin_until([&] {
+        camera_pub_->publish(camera_command);
+        joint_state_pub_->publish(joint_state);
+        return !received_.empty();
+    }));
+
+    const auto& joint_command = received_.front();
+    for (double val : joint_command.position) {
+        EXPECT_LE(val, 3.0); /* from make_joint_state_msg */
+        EXPECT_GE(val, 1.0); /* from stub_kinematics.cpp */
+    }
+}
+
+TEST_F(MotionControlPubSubTest, NoOutputWithoutJointState) {
+    camera_pub_->publish(make_camera_command_msg());
+    spin_for(300ms);
+    EXPECT_TRUE(received_.empty());
+}
+
+TEST_F(MotionControlPubSubTest, NoOutputWithoutCameraOrientationCommand) {
+    joint_state_pub_->publish(make_joint_state_msg());
+    spin_for(300ms);
+    EXPECT_TRUE(received_.empty());
 }
