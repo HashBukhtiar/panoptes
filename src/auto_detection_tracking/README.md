@@ -28,9 +28,9 @@ Press `1`, `2` or `3` to make a class the target (in the order listed under `cla
 - **searching**: not seen since you selected it.
 - **tracking** (green box): detected this frame. Once found, the target follows the box nearest its last position, so a higher-scoring look-alike elsewhere doesn't steal it.
 - **holding** (yellow box): missed for less than `lost_after_s`; the last box is kept.
-- **lost** (red cross at the last known position): missed for longer. The next detection of the class, anywhere, reacquires it. Quit with `q`, `Esc`, or by closing the window.
+- **lost** (red cross at the last known position): missed for longer. The next detection of the class, anywhere, reacquires it.
 
-The window is the camera-active indicator (DI-22): the camera is open only while the window is showing, and nothing is recorded.
+Quit with `q`, `Esc`, or by closing the window. The window is the camera-active indicator (DI-22): the camera is open only while the window is showing, and nothing is recorded.
 
 On macOS, the first webcam run asks for camera permission for your terminal app and exits with "Could not open camera source" while the prompt is up. Allow it, then run again. If no prompt appears, turn your terminal app on under System Settings > Privacy & Security > Camera and restart the terminal. If index 0 opens the wrong camera (e.g. an iPhone through Continuity Camera), try `"1"`.
 
