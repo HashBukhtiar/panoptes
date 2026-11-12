@@ -1,15 +1,9 @@
 auto_detection_tracking:
   ros__parameters:
-    # Webcam index ("0" = default camera) or a path to a video file, relative to where you run.
-    # Always a string, so it stays one ROS 2 parameter type for both.
-    source: "0"
-    # Pretrained COCO model (ADT-3). Replaced by our own trained weights in ADT-5.
-    model: "yolo26n.pt"
-    # Labels to detect. Stand-ins until the real instruments arrive (ADT-2).
-    # Keys 1, 2, 3 in the window select them as the target, in this order.
-    classes: ["fork", "spoon", "knife"]
-    # Detections scoring below this are dropped.
-    min_score: 0.25
-    # Seconds the target can go undetected before it's reported lost; until then its last
-    # box is held. Placeholder value, to be tuned in the ADT-10 trials.
-    lost_after_s: 0.5
+    source: "0" # webcam index or video file path; always a string so the ROS 2 type never changes
+
+    model: "yolo26n.pt" # pretrained COCO model (ADT-3); replaced by our own weights in ADT-5
+    classes: ["fork", "spoon", "knife"] # stand-ins until the instruments arrive; keys 1-3 select them in order
+    min_score: 0.25 # detections scoring below this are dropped
+
+    lost_after_s: 0.5 # seconds undetected before the target is lost (last box held until then); placeholder, tune in ADT-10

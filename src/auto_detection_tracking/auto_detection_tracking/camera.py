@@ -20,16 +20,17 @@ def frames(source):
             "this terminal has camera permission (System Settings > Privacy & Security > Camera). "
             "For a video file, check the path.")
     try:
-        # Webcams set their own pace; video files are paced to their own frame rate so
-        # they behave like a live camera.
-        fps = cap.get(cv2.CAP_PROP_FPS) if is_file else 0
-        period = 1.0 / fps if fps > 0 else 0.0
-        next_due = time.monotonic()
+        if is_file:  # play at the file's own frame rate so it behaves like a live camera
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            period = 1.0 / fps if fps > 0 else 0.0
+            next_due = time.monotonic()
         while True:
-            delay = next_due - time.monotonic()
-            if delay > 0:
-                time.sleep(delay)
-            next_due = max(next_due, time.monotonic()) + period
+            if is_file:
+                delay = next_due - time.monotonic()
+                if delay > 0:
+                    time.sleep(delay)
+                next_due = max(next_due, time.monotonic()) + period
+            # A webcam needs no pacing: grab() waits for its next frame.
             if not cap.grab():
                 return
             # ponytail: host time when the frame arrived, not exposure time; use the ZED SDK's
