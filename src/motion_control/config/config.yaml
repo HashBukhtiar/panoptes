@@ -2,8 +2,6 @@ motion_control:
   ros__parameters:
     loop_rate_hz: 100.0
 
-    joint_names: ['joint1', 'joint2'] # TODO: update this to match the actual joint names
-
     max_speed_rad_s: 1.0 # maximum allowed speed in radians per second
     max_accel_rad_s2: 3.0 # maximum allowed acceleration in radians per second squared
 
@@ -17,6 +15,7 @@ motion_control:
     joint_state_good_streak_min_ms: 500.0 # if good this long, recalibrate
 
     # Numerical limits
+    joint_names: ['joint1', 'joint2'] # TODO: update this to match the actual joint names
     joint_min_rad: [-1.57, -1.57]
     joint_max_rad: [1.57, 1.57]
     camera_min_rad: [-1.57, -1.57, -1.57] # order: yaw, pitch, roll
