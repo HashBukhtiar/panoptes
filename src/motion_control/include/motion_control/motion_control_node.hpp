@@ -30,18 +30,18 @@ class MotionControlNode : public rclcpp::Node {
     const double JOINT_STATE_MAX_GAP_MS_ = declare_and_get("joint_state_max_gap_ms", 100.0);
 
     /* Joint state streak durations (for the deferred hold/recalibrate behaviour) */
-    const double JOINT_STATE_FAULT_STREAK_MAX_MS_ = declare_and_get(
-        "joint_state_fault_streak_max_ms", 500.0); /* if faulty this long, command hold */
-    const double JOINT_STATE_GOOD_STREAK_MIN_MS_ = declare_and_get(
-        "joint_state_good_streak_min_ms", 500.0); /* if good this long, recalibrate */
+    const double JOINT_STATE_FAULT_STREAK_MAX_MS_ =
+        declare_and_get("joint_state_fault_streak_max_ms", 500.0);
+    const double JOINT_STATE_GOOD_STREAK_MIN_MS_ =
+        declare_and_get("joint_state_good_streak_min_ms", 500.0);
 
     /* Numerical limits */
     const std::vector<double> JOINT_MIN_RAD_ = declare_and_get_vec("joint_min_rad", {-1.57, -1.57});
     const std::vector<double> JOINT_MAX_RAD_ = declare_and_get_vec("joint_max_rad", {1.57, 1.57});
     const std::vector<double> CAMERA_MIN_RAD_ =
-        declare_and_get_vec("camera_min_rad", {-1.57, -1.57, -1.57}); /* order: yaw, pitch, roll */
+        declare_and_get_vec("camera_min_rad", {-1.57, -1.57, -1.57});
     const std::vector<double> CAMERA_MAX_RAD_ =
-        declare_and_get_vec("camera_max_rad", {1.57, 1.57, 1.57}); /* order: yaw, pitch, roll */
+        declare_and_get_vec("camera_max_rad", {1.57, 1.57, 1.57});
 
     rclcpp::Subscription<CameraOrientationCommand>::SharedPtr camera_sub_;
     rclcpp::Subscription<JointState>::SharedPtr joint_state_sub_;
