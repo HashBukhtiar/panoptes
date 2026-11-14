@@ -48,8 +48,8 @@ bool is_out_of_order(const Time& stamp, const std::optional<Time>& last_accepted
  * @param to        Later time point.
  * @return          Elapsed time in ms.
  */
-inline double ms_between(std::chrono::steady_clock::time_point from,
-                         std::chrono::steady_clock::time_point to) {
+inline double get_ms_between(std::chrono::steady_clock::time_point from,
+                             std::chrono::steady_clock::time_point to) {
     return std::chrono::duration<double, std::milli>(to - from).count();
 }
 }  // namespace timing
