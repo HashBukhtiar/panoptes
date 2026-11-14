@@ -7,6 +7,7 @@
 #include "interfaces/msg/camera_orientation_command.hpp"
 #include "interfaces/msg/joint_command.hpp"
 #include "kinematics/kinematics.hpp"
+#include "motion_control/alerter.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
 
@@ -42,6 +43,8 @@ class MotionControlNode : public rclcpp::Node {
         declare_and_get_vec("camera_min_rad", {-1.57, -1.57, -1.57});
     const std::vector<double> CAMERA_MAX_RAD_ =
         declare_and_get_vec("camera_max_rad", {1.57, 1.57, 1.57});
+
+    Alerter alerter_{get_logger()};
 
     rclcpp::Subscription<CameraOrientationCommand>::SharedPtr camera_sub_;
     rclcpp::Subscription<JointState>::SharedPtr joint_state_sub_;
