@@ -19,6 +19,8 @@ class MotionControlNode : public rclcpp::Node {
     MotionControlNode();
 
    private:
+    enum class State { CALIBRATING, NORMAL, HOLDING };
+
     const double LOOP_RATE_HZ_ = declare_and_get("loop_rate_hz", 100.0);
     const double MAX_SPEED_RAD_S_ = declare_and_get("max_speed_rad_s", 0.5);
 
@@ -26,6 +28,8 @@ class MotionControlNode : public rclcpp::Node {
     rclcpp::Subscription<JointState>::SharedPtr joint_state_sub_;
     rclcpp::Publisher<JointCommand>::SharedPtr joint_command_pub_;
     rclcpp::TimerBase::SharedPtr timer_;
+
+    State state_ = State::CALIBRATING;
 
     /* Received */
     kinematics::JointAngles
@@ -40,6 +44,7 @@ class MotionControlNode : public rclcpp::Node {
                                      calculations only) */
 
     double declare_and_get(const std::string& name, double fallback);
+
     void on_camera_command(const CameraOrientationCommand::SharedPtr msg);
     void on_joint_state(const JointState::SharedPtr msg);
     void compute_and_send_joint_command();
