@@ -53,14 +53,9 @@ std::vector<double> MotionControlNode::declare_and_get_vec(const std::string& na
  * @param msg       The received CameraOrientationCommand message.
  */
 void MotionControlNode::on_camera_command(const CameraOrientationCommand::SharedPtr msg) {
-    if (!msg) {
-        alerter_.raise("received null camera command, dropping this message");
-        return;
-    }
-
-    if (!validation::valid_camera_orientation(msg->yaw, msg->pitch, msg->roll, CAMERA_MIN_RAD_,
-                                              CAMERA_MAX_RAD_)) {
-        alerter_.raise("received invalid camera command, dropping this message");
+    if (!msg || !validation::valid_camera_orientation(msg->yaw, msg->pitch, msg->roll,
+                                                      CAMERA_MIN_RAD_, CAMERA_MAX_RAD_)) {
+        alerter_.raise("received null/invalid camera command, dropping this message");
         return;
     }
 
@@ -95,12 +90,7 @@ void MotionControlNode::on_camera_command(const CameraOrientationCommand::Shared
  * @param msg       The received JointState message.
  */
 void MotionControlNode::on_joint_state(const JointState::SharedPtr msg) {
-    if (!msg) {
-        // TODO: handle
-        return;
-    }
-
-    if (!validation::valid_joint_positions(msg->position, JOINT_MIN_RAD_, JOINT_MAX_RAD_)) {
+    if (!msg || !validation::valid_joint_positions(msg->position, JOINT_MIN_RAD_, JOINT_MAX_RAD_)) {
         // TODO: handle
         return;
     }
