@@ -36,4 +36,22 @@ inline double compute_trajectory(double curr, double target, double scale) {
     return curr + (target - curr) * scale;
 }
 
+/**
+ * Moves `positions` toward `target`, limited to max_speed_rad_s over dt seconds.
+ *
+ * @param positions         Current commanded joint positions, updated in place.
+ * @param target            Target joint positions.
+ * @param max_speed_rad_s   Maximum speed per joint (rad/s).
+ * @param dt                Time since the last step (s).
+ */
+template <typename Positions, typename Target>
+void step_rate_limited(Positions& positions, const Target& target, double max_speed_rad_s,
+                       double dt) {
+    const double scale = compute_scale(positions, target, max_speed_rad_s * dt);
+
+    for (size_t i = 0; i < target.size(); ++i) {
+        positions[i] = compute_trajectory(positions[i], target[i], scale);
+    }
+}
+
 }  // namespace trajectory
