@@ -1,0 +1,111 @@
+<?xml version="1.0" ?>
+<robot name="TWIST2_URDF">
+
+  <material name="silver">
+    <color rgba="0.75 0.75 0.75 1.0"/>
+  </material>
+
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0.09667376873155133 0.055706088572205915 0.01609220257958103" rpy="0 0 0"/>
+      <mass value="0.422294816315801"/>
+      <inertia ixx="0.000205" iyy="0.000757" izz="0.000869" ixy="-4.8e-05" iyz="-1.2e-05" ixz="-0.000104"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://TWIST2-URDF_description/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="silver"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://TWIST2-URDF_description/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="yaw_gear_1_1">
+    <inertial>
+      <origin xyz="1.9248874630339863e-07 3.6784970880443524e-07 0.0028752442486757526" rpy="0 0 0"/>
+      <mass value="0.014683455991502265"/>
+      <inertia ixx="1e-06" iyy="1e-06" izz="1e-06" ixy="0.0" iyz="0.0" ixz="0.0"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.130435 -0.052395 -0.037577" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://TWIST2-URDF_description/meshes/yaw_gear_1_1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="silver"/>
+    </visual>
+  </link>
+
+  <link name="yaw_gear_2_1">
+    <inertial>
+      <origin xyz="-0.0009033771958933678 -0.00031111463486323265 0.011965960239558378" rpy="0 0 0"/>
+      <mass value="0.033192314056346275"/>
+      <inertia ixx="4e-06" iyy="8e-06" izz="7e-06" ixy="0.0" iyz="0.0" ixz="0.0"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.151435 -0.052395 -0.039377" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://TWIST2-URDF_description/meshes/yaw_gear_2_1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="silver"/>
+    </visual>
+    <collision>
+      <origin xyz="-0.151435 -0.052395 -0.039377" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://TWIST2-URDF_description/meshes/yaw_gear_2_1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="camera_plate_1">
+    <inertial>
+      <origin xyz="-0.002699703653318647 0.002134347142578201 0.03959812917690876" rpy="0 0 0"/>
+      <mass value="0.9534530960491588"/>
+      <inertia ixx="0.000796" iyy="0.000302" izz="0.000879" ixy="5.6e-05" iyz="-5e-06" ixz="-4e-06"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.151435 -0.056395 -0.058377" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://TWIST2-URDF_description/meshes/camera_plate_1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="silver"/>
+    </visual>
+    <collision>
+      <origin xyz="-0.151435 -0.056395 -0.058377" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://TWIST2-URDF_description/meshes/camera_plate_1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="yaw_pinion_joint" type="revolute">
+    <origin xyz="0.130435 0.052395 0.037577" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="yaw_gear_1_1"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit upper="1.570796" lower="-1.570796" effort="100" velocity="100"/>
+    <mimic joint="yaw_joint" multiplier="1.0" offset="0.0"/>
+  </joint>
+
+  <joint name="yaw_joint" type="revolute">
+    <origin xyz="0.151435 0.052395 0.039377" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="yaw_gear_2_1"/>
+    <axis xyz="0.0 0.0 -1.0"/>
+    <limit upper="1.570796" lower="-1.570796" effort="100" velocity="100"/>
+  </joint>
+
+  <joint name="pitch_joint" type="revolute">
+    <origin xyz="0.0 0.004 0.019" rpy="0 0 0"/>
+    <parent link="yaw_gear_2_1"/>
+    <child link="camera_plate_1"/>
+    <axis xyz="0.0 -1.0 0.0"/>
+    <limit upper="0.610865" lower="-1.308997" effort="100" velocity="100"/>
+  </joint>
+
+</robot>
