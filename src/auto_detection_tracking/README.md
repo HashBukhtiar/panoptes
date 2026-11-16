@@ -1,6 +1,6 @@
 # auto_detection_tracking
 
-Autonomous-mode vision: find the operator's selected instrument and keep it centred. So far it opens a camera source, shows it live (ADT-1), and boxes the configured objects with a pretrained YOLO model (ADT-3), lets you pick one as the target (ADT-6), and follows it between frames (ADT-7). Until the real instruments arrive, the configured objects are stand-ins: fork, spoon and knife.
+Autonomous-mode vision: find the operator's selected instrument and keep it centred. So far it opens a camera source, shows it live (ADT-1), and boxes the configured objects with a pretrained YOLO model (ADT-3), lets you pick one as the target (ADT-6), follows it between frames (ADT-7), and shows the direction the camera should turn (ADT-8). Until the real instruments arrive, the configured objects are stand-ins: fork, spoon and knife.
 
 ## Setup (once, from the repo root)
 
@@ -29,6 +29,8 @@ Press `1`, `2` or `3` to make a class the target (in the order listed under `cla
 - **tracking** (green box): detected this frame. Once found, the target follows the box nearest its last position, so a higher-scoring look-alike elsewhere doesn't steal it.
 - **holding** (yellow box): missed for less than `lost_after_s`; the last box is kept.
 - **lost** (red cross at the last known position): missed for longer. The next detection of the class, anywhere, reacquires it.
+
+Under the status, a second line stands in for the camera command until there's a mechanism to move (ADT-8): `MOVE LEFT 12 deg DOWN 4 deg`, `CENTRED` within `centred_deg` (5°, DI-7), or `LOST - MOVE UP` from the last known position. Directions are from the camera's point of view, so facing your webcam, "LEFT" is your right. The degrees come from `hfov_deg`, the camera's horizontal field of view. **It's an unmeasured placeholder:** hold a ruler level at distance D from the camera, read the width W visible across the frame, and set `hfov_deg` to 2·atan(W / 2D) in degrees.
 
 Quit with `q`, `Esc`, or by closing the window. The window is the camera-active indicator (DI-22): the camera is open only while the window is showing, and nothing is recorded.
 

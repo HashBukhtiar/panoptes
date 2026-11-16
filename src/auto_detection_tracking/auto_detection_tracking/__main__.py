@@ -12,6 +12,7 @@ import yaml
 
 from auto_detection_tracking import detector
 from auto_detection_tracking.camera import frames
+from auto_detection_tracking.pointing import focal_px, orientation_command, readout
 from auto_detection_tracking.target import HOLDING, LOST, TRACKING, Tracker, centre
 
 CONFIG = Path(__file__).resolve().parent.parent / "config" / "auto_detection_tracking.yaml"
@@ -66,6 +67,11 @@ def main():
                           if tracker.label else f"Target: none (press 1-{len(classes)})")
                 cv2.putText(image, status, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8,
                             STATE_COLOUR.get(state, YELLOW), 2)
+                if target:  # tracking, holding or lost: the command ADT-12 will publish
+                    f = focal_px(params["hfov_deg"], image.shape[1])
+                    yaw, pitch = orientation_command(target[2], image.shape, f)  # stamp: stamp_ns
+                    cv2.putText(image, readout(state, yaw, pitch, params["centred_deg"]), (10, 65),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.8, STATE_COLOUR[state], 2)
                 cv2.imshow(WINDOW, image)
                 key = cv2.waitKey(1) & 0xFF
                 if key in (ord("q"), 27) or not window_open():
