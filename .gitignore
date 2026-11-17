@@ -10,6 +10,7 @@ __pycache__/
 CLAUDE.md
 .venv/
 .pytest_cache/
+logs/
 
 # Model weights (downloaded or trained, often large)
 *.pt

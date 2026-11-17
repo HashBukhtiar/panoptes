@@ -36,6 +36,14 @@ Quit with `q`, `Esc`, or by closing the window. The window is the camera-active 
 
 On macOS, the first webcam run asks for camera permission for your terminal app and exits with "Could not open camera source" while the prompt is up. Allow it, then run again. If no prompt appears, turn your terminal app on under System Settings > Privacy & Security > Camera and restart the terminal. If index 0 opens the wrong camera (e.g. an iPhone through Continuity Camera), try `"1"`.
 
+## Log a run (ADT-9)
+
+```bash
+python -m auto_detection_tracking --log logs/run1.csv
+```
+
+Writes one CSV row per frame: capture time (`stamp_ns`), capture-to-command latency (`latency_ms`), the selected class and tracking `state`, the target's label, score and box, the angle offset (`yaw_deg`, `pitch_deg`, `off_centre_deg`), and every detection as JSON. It's for measuring DI-7, DI-8 and DI-9 in ADT-10. Only metadata is logged, never images (DI-22). `logs/` is gitignored. The top-right of the window shows FPS and the same latency.
+
 ## Test
 
 ```bash
