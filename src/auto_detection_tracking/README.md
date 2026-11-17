@@ -25,10 +25,10 @@ Pick the source in `config/auto_detection_tracking.yaml`: a webcam index (`"0"`)
 
 Press `1`, `2` or `3` to make a class the target (in the order listed under `classes`), and `0` to clear it. The target gets a thick green box; other detected objects get thin grey boxes and are ignored (DI-8). The status line shows the tracking state:
 
-- **searching**: not seen since you selected it.
+- **searching**: not yet seen with a score of at least `acquire_score` since you selected it. Requiring a confident box to start keeps weak look-alikes from being picked up (DI-8).
 - **tracking** (green box): detected this frame. Once found, the target follows the box nearest its last position, so a higher-scoring look-alike elsewhere doesn't steal it.
 - **holding** (yellow box): missed for less than `lost_after_s`; the last box is kept.
-- **lost** (red cross at the last known position): missed for longer. The next detection of the class, anywhere, reacquires it.
+- **lost** (red cross at the last known position): missed for longer. The next detection of the class scoring at least `acquire_score`, anywhere, reacquires it.
 
 Under the status, a second line stands in for the camera command until there's a mechanism to move (ADT-8): `MOVE LEFT 12 deg DOWN 4 deg`, `CENTRED` within `centred_deg` (5°, DI-7), or `LOST - MOVE UP` from the last known position. Directions are from the camera's point of view, so facing your webcam, "LEFT" is your right. The degrees come from `hfov_deg`, the camera's horizontal field of view, set for Hashim's MacBook webcam. For another camera, hold a ruler level at distance D from it, read the width W visible across the frame, and set `hfov_deg` to 2·atan(W / 2D) in degrees. Keep macOS Center Stage off (Control Center > Video Effects): it crops and pans the image, so the angles would be wrong.
 

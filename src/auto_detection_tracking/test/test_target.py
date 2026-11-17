@@ -1,5 +1,6 @@
 """ADT-6 / DI-8: only the selected class is ever reported as the target.
-ADT-7: the target is followed between frames, held through short gaps, then reported lost."""
+ADT-7: the target is followed between frames, held through short gaps, then reported lost.
+Starting to track needs a confident box (acquire_score); following doesn't."""
 from auto_detection_tracking.target import HOLDING, LOST, SEARCHING, TRACKING, Tracker, pick
 
 FORK = ("fork", 0.6, (0, 0, 10, 10))
@@ -9,9 +10,19 @@ MS = 1_000_000  # nanoseconds per millisecond
 
 
 def tracker_on(label):
-    tracker = Tracker(lost_after_s=0.5)
+    tracker = Tracker(lost_after_s=0.5, acquire_score=0.5)
     tracker.select(label)
     return tracker
+
+
+def test_a_weak_box_cannot_start_tracking_but_can_continue_it():
+    tracker = tracker_on("knife")
+    assert tracker.update([KNIFE_LOW], 0) == (SEARCHING, None)  # 0.4 is below acquire_score
+    tracker.update([KNIFE_HIGH], 33 * MS)
+    weak_nearby = ("knife", 0.3, (21, 0, 31, 10))
+    assert tracker.update([weak_nearby], 66 * MS) == (TRACKING, weak_nearby)
+    tracker.update([], 700 * MS)  # lost
+    assert tracker.update([KNIFE_LOW], 733 * MS) == (LOST, weak_nearby)  # too weak to reacquire
 
 
 def test_only_the_selected_label_is_reported_even_if_another_scores_higher():
