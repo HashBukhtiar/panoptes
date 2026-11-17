@@ -5,3 +5,5 @@ auto_detection_tracking:
     model: "yolo26n.pt" # pretrained COCO model (ADT-3); replaced by our own weights in ADT-5
     classes: ["fork", "spoon", "knife"] # stand-ins until the instruments arrive; keys 1-3 select them in order
     min_score: 0.25 # detections scoring below this are dropped
+
+    lost_after_s: 0.5 # seconds undetected before the target is lost (last box held until then); placeholder, tune in ADT-10

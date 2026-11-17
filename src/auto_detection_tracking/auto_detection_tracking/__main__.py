@@ -12,12 +12,12 @@ import yaml
 
 from auto_detection_tracking import detector
 from auto_detection_tracking.camera import frames
-from auto_detection_tracking.target import pick
+from auto_detection_tracking.target import HOLDING, LOST, TRACKING, Tracker, centre
 
 CONFIG = Path(__file__).resolve().parent.parent / "config" / "auto_detection_tracking.yaml"
 WINDOW = "Panoptes - camera active (q to quit)"
-GREEN = (0, 255, 0)
-GREY = (160, 160, 160)
+GREEN, YELLOW, RED, GREY = (0, 255, 0), (0, 255, 255), (0, 0, 255), (160, 160, 160)
+STATE_COLOUR = {TRACKING: GREEN, HOLDING: YELLOW, LOST: RED}
 
 
 def window_open():
@@ -44,30 +44,36 @@ def main():
     print(f"Loading {params['model']}...", flush=True)
     detect = detector.load(params["model"], classes, params["min_score"])
     print(f"Showing {source} in a new window (q or Esc to quit)", flush=True)
-    selected = None  # nothing is targeted until the operator picks (DI-7 timing starts there)
+    tracker = Tracker(params["lost_after_s"])  # nothing targeted until the operator picks (DI-7)
     # DI-22: the window is the camera-active indicator, so the camera is released before
     # the window closes, and closing the window stops the camera.
     try:
         with closing(frames(source)) as stream:
-            for _stamp_ns, image in stream:
+            for stamp_ns, image in stream:
                 detections = detect(image)
-                target = pick(detections, selected)
+                state, target = tracker.update(detections, stamp_ns)
                 for d in detections:
                     if d is not target:  # detected but not the target (DI-8)
                         draw(image, d, GREY, 1, f"{d[0]} {d[1]:.2f}")
-                if target:
+                if state == TRACKING:
                     draw(image, target, GREEN, 3, f"TARGET {target[0]} {target[1]:.2f}")
-                status = (f"Target: {selected} ({classes.index(selected) + 1})" if selected
-                          else f"Target: none (press 1-{len(classes)})")
-                cv2.putText(image, status, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, GREEN, 2)
+                elif state == HOLDING:
+                    draw(image, target, YELLOW, 3, f"TARGET {target[0]} (held)")
+                elif state == LOST:  # mark the last known position
+                    x, y = (int(v) for v in centre(target[2]))
+                    cv2.drawMarker(image, (x, y), RED, cv2.MARKER_TILTED_CROSS, 24, 3)
+                status = (f"Target: {tracker.label} ({classes.index(tracker.label) + 1}) - {state}"
+                          if tracker.label else f"Target: none (press 1-{len(classes)})")
+                cv2.putText(image, status, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8,
+                            STATE_COLOUR.get(state, YELLOW), 2)
                 cv2.imshow(WINDOW, image)
                 key = cv2.waitKey(1) & 0xFF
                 if key in (ord("q"), 27) or not window_open():
                     break
                 if ord("1") <= key < ord("1") + len(classes):
-                    selected = classes[key - ord("1")]
+                    tracker.select(classes[key - ord("1")])
                 elif key == ord("0"):
-                    selected = None
+                    tracker.select(None)
     except KeyboardInterrupt:
         pass
     finally:
