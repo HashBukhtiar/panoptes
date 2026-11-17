@@ -1,8 +1,7 @@
 """Direction command (ADT-8): turn the target's position in the image into camera angles.
 
-Angles follow CameraOrientationCommand: radians, counter-clockwise positive. Assuming REP 103
-axes (x forward, y left, z up), +yaw turns the camera left and +pitch tilts it down.
-TODO(RI-1): confirm the axis directions with Alina.
+Angles follow CameraOrientationCommand: radians, counter-clockwise positive about REP 103 axes
+(x forward, y left, z up), so +yaw turns the camera left and +pitch tilts it down.
 """
 import math
 
