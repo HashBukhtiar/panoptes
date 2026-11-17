@@ -30,7 +30,7 @@ Press `1`, `2` or `3` to make a class the target (in the order listed under `cla
 - **holding** (yellow box): missed for less than `lost_after_s`; the last box is kept.
 - **lost** (red cross at the last known position): missed for longer. The next detection of the class, anywhere, reacquires it.
 
-Under the status, a second line stands in for the camera command until there's a mechanism to move (ADT-8): `MOVE LEFT 12 deg DOWN 4 deg`, `CENTRED` within `centred_deg` (5°, DI-7), or `LOST - MOVE UP` from the last known position. Directions are from the camera's point of view, so facing your webcam, "LEFT" is your right. The degrees come from `hfov_deg`, the camera's horizontal field of view. **It's an unmeasured placeholder:** hold a ruler level at distance D from the camera, read the width W visible across the frame, and set `hfov_deg` to 2·atan(W / 2D) in degrees.
+Under the status, a second line stands in for the camera command until there's a mechanism to move (ADT-8): `MOVE LEFT 12 deg DOWN 4 deg`, `CENTRED` within `centred_deg` (5°, DI-7), or `LOST - MOVE UP` from the last known position. Directions are from the camera's point of view, so facing your webcam, "LEFT" is your right. The degrees come from `hfov_deg`, the camera's horizontal field of view, set for Hashim's MacBook webcam. For another camera, hold a ruler level at distance D from it, read the width W visible across the frame, and set `hfov_deg` to 2·atan(W / 2D) in degrees. Keep macOS Center Stage off (Control Center > Video Effects): it crops and pans the image, so the angles would be wrong.
 
 Quit with `q`, `Esc`, or by closing the window. The window is the camera-active indicator (DI-22): the camera is open only while the window is showing, and nothing is recorded.
 

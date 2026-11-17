@@ -8,5 +8,5 @@ auto_detection_tracking:
 
     lost_after_s: 0.5 # seconds undetected before the target is lost (last box held until then); placeholder, tune in ADT-10
 
-    hfov_deg: 60.0 # TODO: UNMEASURED placeholder for the webcam's horizontal field of view; on-screen degrees are wrong until set
+    hfov_deg: 53.9 # MacBook webcam horizontal field of view, measured Nov 17: 30.5 in visible at 30 in away (2*atan(W/2D))
     centred_deg: 5.0 # off-centre angle that counts as centred (DI-7)
