@@ -3,6 +3,8 @@
 Keys 1, 2, 3 select the configured classes in order as the target; 0 clears it.
 Run from src/auto_detection_tracking/:
     python -m auto_detection_tracking [--source SOURCE] [--log logs/run.csv]
+Run from src/auto_detection_tracking/:
+    python -m auto_detection_tracking [--source SOURCE] [--log logs/run.csv]
 """
 import argparse
 import time
@@ -55,7 +57,7 @@ def main():
     print(f"Loading {params['model']}...", flush=True)
     detect = detector.load(params["model"], classes, params["min_score"])
     print(f"Showing {source} in a new window (q or Esc to quit)", flush=True)
-    tracker = Tracker(params["lost_after_s"], params["acquire_score"])  # nothing targeted until the operator picks (DI-7)
+    tracker = Tracker(params["lost_after_s"])  # nothing targeted until the operator picks (DI-7)
     log_file, log = open_log(args.log) if args.log else (None, None)
     fps, prev_stamp_ns = 0.0, None
     # DI-22: the window is the camera-active indicator, so the camera is released before
