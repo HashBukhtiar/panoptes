@@ -25,10 +25,15 @@ class Tracker:
     States: searching (not seen since it was selected), tracking (detected this frame),
     holding (missed for less than lost_after_s; the last box is kept), lost (missed for
     longer; the last box is kept as the last known position).
+
+    Starting to track (from searching or lost) needs a box scoring at least acquire_score;
+    once tracking, any box of the class is followed. A confidently detected object is less
+    likely to be a look-alike given the same label (DI-8).
     """
 
-    def __init__(self, lost_after_s):
+    def __init__(self, lost_after_s, acquire_score):
         self.lost_after_ns = int(lost_after_s * 1e9)
+        self.acquire_score = acquire_score
         self.select(None)
 
     def select(self, label):
@@ -45,6 +50,8 @@ class Tracker:
             return None, None
         matches = [d for d in detections if d[0] == self.label]
         locked = self.last is not None and stamp_ns - self.last_seen_ns < self.lost_after_ns
+        if not locked:  # only a confident box can start tracking
+            matches = [d for d in matches if d[1] >= self.acquire_score]
         if matches:
             if locked:  # follow the box nearest the last position, not the highest score
                 last_centre = centre(self.last[2])
