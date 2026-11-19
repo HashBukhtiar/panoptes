@@ -53,26 +53,21 @@ std::vector<double> MotionControlNode::declare_and_get_vec(const std::string& na
  * @param msg       The received CameraOrientationCommand message.
  */
 void MotionControlNode::on_camera_command(const CameraOrientationCommand::SharedPtr msg) {
-    if (!msg) {
-        // TODO: handle
-        return;
-    }
-
-    if (!validation::valid_camera_orientation(msg->yaw, msg->pitch, msg->roll, CAMERA_MIN_RAD_,
-                                              CAMERA_MAX_RAD_)) {
-        // TODO: handle
+    if (!msg || !validation::valid_camera_orientation(msg->yaw, msg->pitch, msg->roll,
+                                                      CAMERA_MIN_RAD_, CAMERA_MAX_RAD_)) {
+        alerter_.raise("received null/invalid camera command, dropping this message");
         return;
     }
 
     const rclcpp::Time stamp(msg->header.stamp, get_clock()->get_clock_type());
 
     if (timing::is_too_old(timing::get_age_ms(now(), stamp), CAMERA_COMMAND_MAX_AGE_MS_)) {
-        // TODO: handle
+        alerter_.raise("received old camera command, dropping this message");
         return;
     }
 
     if (timing::is_out_of_order(stamp, last_camera_command_stamp_)) {
-        // TODO: handle
+        /* not alerting here */
         return;
     }
 
@@ -81,7 +76,7 @@ void MotionControlNode::on_camera_command(const CameraOrientationCommand::Shared
 
     if (!joint_angles ||
         !validation::valid_joint_positions(*joint_angles, JOINT_MIN_RAD_, JOINT_MAX_RAD_)) {
-        // TODO: handle
+        alerter_.raise("kinematics library made invalid transformation, dropping this message");
         return;
     }
 
@@ -95,12 +90,7 @@ void MotionControlNode::on_camera_command(const CameraOrientationCommand::Shared
  * @param msg       The received JointState message.
  */
 void MotionControlNode::on_joint_state(const JointState::SharedPtr msg) {
-    if (!msg) {
-        // TODO: handle
-        return;
-    }
-
-    if (!validation::valid_joint_positions(msg->position, JOINT_MIN_RAD_, JOINT_MAX_RAD_)) {
+    if (!msg || !validation::valid_joint_positions(msg->position, JOINT_MIN_RAD_, JOINT_MAX_RAD_)) {
         // TODO: handle
         return;
     }
@@ -113,7 +103,7 @@ void MotionControlNode::on_joint_state(const JointState::SharedPtr msg) {
     }
 
     if (timing::is_out_of_order(stamp, last_joint_state_stamp_)) {
-        // TODO: handle
+        /* not alerting here */
         return;
     }
 
