@@ -109,7 +109,7 @@ class MotionControlPubSubTest : public ::testing::Test {
         JointState msg;
         msg.header.stamp.sec = 123;
         msg.header.stamp.nanosec = 456;
-        msg.position = {1.5, 1.5, 1.5};
+        msg.position = {2.0, 2.0, 2.0};
         return msg;
     }
 };
@@ -141,7 +141,7 @@ TEST_F(MotionControlPubSubTest, SeedsStartPositionWithJointState) {
 
     const auto& joint_command = received_.front();
     for (double val : joint_command.position) {
-        EXPECT_LE(val, 3.0); /* from make_joint_state_msg */
+        EXPECT_LE(val, 2.0); /* from make_joint_state_msg */
         EXPECT_GE(val, 1.0); /* from stub_kinematics.cpp */
     }
 }
