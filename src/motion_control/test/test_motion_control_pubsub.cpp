@@ -29,7 +29,20 @@ class MotionControlPubSubTest : public ::testing::Test {
     std::vector<JointCommand> received_;
 
     static void SetUpTestSuite() {
-        rclcpp::init(0, nullptr);
+        /* Override normal configuration limits since this test uses dummy inputs, not real data */
+        const std::vector<const char*> args = {
+            "test_motion_control_pubsub",
+            "--ros-args",
+            "-p",
+            "camera_command_max_age_ms:=1e15",
+            "-p",
+            "joint_state_max_age_ms:=1e15",
+            "-p",
+            "joint_min_rad:=[-3.0,-3.0,-3.0]",
+            "-p",
+            "joint_max_rad:=[3.0,3.0,3.0]",
+        };
+        rclcpp::init(static_cast<int>(args.size()), args.data());
     }
     static void TearDownTestSuite() {
         rclcpp::shutdown();
