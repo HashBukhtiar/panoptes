@@ -49,7 +49,6 @@ std::vector<double> MotionControlNode::declare_and_get_vec(const std::string& na
 
 /**
  * Stops motion and alerts.
- * TODO: Make this non-abrupt later
  */
 void MotionControlNode::hold() {
     alerter_.raise("[WARN] incoming messages are faulty for too long, holding");
@@ -58,10 +57,10 @@ void MotionControlNode::hold() {
 
 /**
  * Re-seeds the last joint command from the latest joint state, then resumes.
- * TODO: Make this non-abrupt later
  */
 void MotionControlNode::recalibrate() {
     last_joint_command_.position = last_joint_state_;
+    alerter_.raise("[INFO] incoming messages now good, recalibrating");
     state_ = State::NORMAL;
 }
 
@@ -86,9 +85,7 @@ void MotionControlNode::start_joint_state_good_timer() {
 }
 
 /**
- * Checks all timers and changes mode accordingly.
- * NORMAL -> HOLDING when faulty for JOINT_STATE_FAULT_STREAK_MAX_MS_,
- * HOLDING -> NORMAL (recalibrated) when good for JOINT_STATE_GOOD_STREAK_MIN_MS_.
+ * Checks all timers and responds to state changes accordingly.
  *
  * @param now       Current local time.
  */
@@ -177,9 +174,9 @@ void MotionControlNode::on_joint_state(const JointState::SharedPtr msg) {
 
     const LocalClockTime now = std::chrono::steady_clock::now();
 
+    last_joint_state_ = msg->position;
     last_joint_state_stamp_ = stamp;
     last_joint_state_time_ = now;
-    last_joint_state_ = msg->position;
     start_joint_state_good_timer();
 
     /* use the first received joint state as the initial position for trajectory generation */
@@ -201,7 +198,7 @@ void MotionControlNode::compute_and_send_joint_command() {
     double dt = std::chrono::duration<double>(now - last_joint_command_time_).count();
     last_joint_command_time_ = now;
 
-    if (last_target_joint_angles_.empty() || last_joint_command_.position.empty()) {
+    if (last_joint_command_.position.empty()) {
         return;
     }
 
@@ -210,5 +207,6 @@ void MotionControlNode::compute_and_send_joint_command() {
                                       MAX_SPEED_RAD_S_, dt);
         last_joint_command_.header.stamp = *last_camera_command_stamp_;
     }
+
     joint_command_pub_->publish(last_joint_command_);
 }
