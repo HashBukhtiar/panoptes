@@ -53,6 +53,9 @@ std::vector<double> MotionControlNode::declare_and_get_vec(const std::string& na
 void MotionControlNode::hold() {
     alerter_.raise("[WARN] incoming messages are faulty for too long, holding");
     state_ = State::HOLDING;
+    if (!hold_start_time_) {
+        hold_start_time_ = std::chrono::steady_clock::now();
+    }
 }
 
 /**
@@ -62,6 +65,21 @@ void MotionControlNode::recalibrate() {
     last_joint_command_.position = last_joint_state_;
     alerter_.raise("[INFO] incoming messages now good, recalibrating");
     state_ = State::NORMAL;
+    hold_start_time_.reset();
+}
+
+/**
+ * Stops motion permanently and raises an urgent alert: a restart is required.
+ * The loop keeps republishing the last command unchanged, and nothing leaves this state.
+ *
+ * @param reason    Why the node is terminating, included in the alert.
+ */
+void MotionControlNode::terminate(const std::string& reason) {
+    if (state_ == State::TERMINAL) {
+        return;
+    }
+    alerter_.raise("[URGENT] restart required, terminating: " + reason);
+    state_ = State::TERMINAL;
 }
 
 /**
@@ -90,7 +108,7 @@ void MotionControlNode::start_joint_state_good_timer() {
  * @param now       Current local time.
  */
 void MotionControlNode::update_state(LocalClockTime now) {
-    if (state_ == State::CALIBRATING) {
+    if (state_ == State::CALIBRATING || state_ == State::TERMINAL) {
         return;
     }
 
@@ -100,14 +118,21 @@ void MotionControlNode::update_state(LocalClockTime now) {
         start_joint_state_fault_timer();
     }
 
-    if (state_ == State::NORMAL && joint_state_fault_start_time_ &&
-        timing::get_ms_between(*joint_state_fault_start_time_, now) >=
-            JOINT_STATE_FAULT_STREAK_MAX_MS_) {
-        hold();
-    } else if (state_ == State::HOLDING && joint_state_good_start_time_ &&
-               timing::get_ms_between(*joint_state_good_start_time_, now) >=
-                   JOINT_STATE_GOOD_STREAK_MIN_MS_) {
-        recalibrate();
+    if (state_ == State::NORMAL) {
+        if (joint_state_fault_start_time_ &&
+            timing::get_ms_between(*joint_state_fault_start_time_, now) >=
+                JOINT_STATE_FAULT_STREAK_MAX_MS_) {
+            hold();
+        }
+    } else if (state_ == State::HOLDING) {
+        if (hold_start_time_ &&
+            timing::get_ms_between(*hold_start_time_, now) >= HOLD_MAX_DURATION_MS_) {
+            terminate("hold duration exceeded tolerance");
+        } else if (joint_state_good_start_time_ &&
+                   timing::get_ms_between(*joint_state_good_start_time_, now) >=
+                       JOINT_STATE_GOOD_STREAK_MIN_MS_) {
+            recalibrate();
+        }
     }
 }
 
@@ -202,7 +227,7 @@ void MotionControlNode::compute_and_send_joint_command() {
         return;
     }
 
-    if (state_ == State::NORMAL) {
+    if (state_ == State::NORMAL && !last_target_joint_angles_.empty()) {
         trajectory::step_rate_limited(last_joint_command_.position, last_target_joint_angles_,
                                       MAX_SPEED_RAD_S_, dt);
         last_joint_command_.header.stamp = *last_camera_command_stamp_;

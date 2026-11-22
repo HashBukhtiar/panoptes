@@ -47,6 +47,7 @@ class MotionControlNode : public rclcpp::Node {
         declare_and_get_vec("camera_max_rad", {1.57, 1.57, 1.57});
 
     /* Configuration - staleness tolerances */
+    const double HOLD_MAX_DURATION_MS_ = declare_and_get("hold_max_duration_ms", 2000.0);
     const double CAMERA_COMMAND_MAX_AGE_MS_ = declare_and_get("camera_command_max_age_ms", 100.0);
     const double JOINT_STATE_MAX_AGE_MS_ = declare_and_get("joint_state_max_age_ms", 100.0);
     const double JOINT_STATE_MAX_GAP_MS_ = declare_and_get("joint_state_max_gap_ms", 100.0);
@@ -80,6 +81,7 @@ class MotionControlNode : public rclcpp::Node {
     LocalClockTime last_joint_command_time_;
 
     /* Internal timers */
+    std::optional<LocalClockTime> hold_start_time_;
     std::optional<LocalClockTime> joint_state_fault_start_time_;
     std::optional<LocalClockTime> joint_state_good_start_time_;
 
@@ -91,6 +93,8 @@ class MotionControlNode : public rclcpp::Node {
     /* State management */
     void hold();
     void recalibrate();
+    void terminate(const std::string& reason);
+
     void start_joint_state_fault_timer();
     void start_joint_state_good_timer();
     void update_state(LocalClockTime now);
