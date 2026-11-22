@@ -1,8 +1,17 @@
 #!/bin/bash
 
-# Usage: `source scripts/setup.sh`
+# Usage: `source scripts/setup.sh [ros_distro]`
 
-source /opt/ros/lyrical/setup.bash
-source install/setup.bash
+ROS_DISTRO=${1:-lyrical}
 
-echo "ROS 2 and workspace sourced."
+source "/opt/ros/$ROS_DISTRO/setup.bash" || {
+    echo "Failed to source ROS 2 $ROS_DISTRO."
+    return 1
+}
+
+source install/setup.bash || {
+    echo "Failed to source workspace."
+    return 1
+}
+
+echo "ROS 2 ($ROS_DISTRO) and workspace sourced."
