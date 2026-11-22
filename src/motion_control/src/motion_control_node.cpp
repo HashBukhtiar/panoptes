@@ -58,12 +58,6 @@ void MotionControlNode::on_camera_command(const CameraOrientationCommand::Shared
         return;
     }
 
-    if (!validation::valid_camera_orientation(msg->yaw, msg->pitch, msg->roll, CAMERA_MIN_RAD_,
-                                              CAMERA_MAX_RAD_)) {
-        // TODO: handle
-        return;
-    }
-
     const rclcpp::Time stamp(msg->header.stamp, get_clock()->get_clock_type());
 
     if (timing::is_too_old(timing::get_age_ms(now(), stamp), CAMERA_COMMAND_MAX_AGE_MS_)) {
@@ -77,6 +71,24 @@ void MotionControlNode::on_camera_command(const CameraOrientationCommand::Shared
     }
 
     kinematics::CameraOrientation orientation{msg->yaw, msg->pitch, msg->roll};
+
+    if (!msg->is_absolute) {
+        auto base = kinematics::forward_kinematics(target_joint_angles_);
+        if (!base) {
+            // TODO: handle
+            return;
+        }
+        orientation.yaw += base->yaw;
+        orientation.pitch += base->pitch;
+        orientation.roll += base->roll;
+    }
+
+    if (!validation::valid_camera_orientation(orientation.yaw, orientation.pitch, orientation.roll,
+                                              CAMERA_MIN_RAD_, CAMERA_MAX_RAD_)) {
+        // TODO: handle
+        return;
+    }
+
     auto joint_angles = kinematics::inverse_kinematics(orientation);
 
     if (!joint_angles ||
