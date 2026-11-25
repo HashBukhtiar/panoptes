@@ -5,16 +5,14 @@ motion_control:
     max_speed_rad_s: 1.0 # maximum allowed speed in radians per second
     max_accel_rad_s2: 3.0 # maximum allowed acceleration in radians per second squared
 
-    # Staleness tolerances
+    hold_max_duration_ms: 2000.0
     camera_command_max_age_ms: 100.0 # camera command older than this (by its stamp) is stale
     joint_state_max_age_ms: 100.0 # joint state older than this (by its stamp) is stale
     joint_state_max_gap_ms: 100.0 # no new joint state appearing for this long is a fault
 
-    # Joint state streak durations (for the deferred hold/recalibrate behaviour)
     joint_state_fault_streak_max_ms: 500.0 # if faulty this long, command hold
     joint_state_good_streak_min_ms: 500.0 # if good this long, recalibrate
 
-    # Numerical limits
     joint_names: ['joint1', 'joint2'] # TODO: update this to match the actual joint names
     joint_min_rad: [-1.57, -1.57]
     joint_max_rad: [1.57, 1.57]
