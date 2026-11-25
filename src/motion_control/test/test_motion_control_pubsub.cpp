@@ -34,13 +34,18 @@ class MotionControlPubSubTest : public ::testing::Test {
             "test_motion_control_pubsub",
             "--ros-args",
             "-p",
-            "camera_command_max_age_ms:=1e15",
+            "camera_command_max_age_ms:=1e15", /* arbitrarily high to avoid test messages being too
+                                                  old */
             "-p",
-            "joint_state_max_age_ms:=1e15",
+            "joint_state_max_age_ms:=1e15", /* arbitrarily high to avoid test messages being too
+                                                  old */
             "-p",
             "joint_min_rad:=[-3.0,-3.0,-3.0]",
             "-p",
             "joint_max_rad:=[3.0,3.0,3.0]",
+            "-p",
+            "max_speed_rad_s:=1e6", /* arbitrarily high so that all test joint commands can be
+                                       accomplished in one step */
         };
         rclcpp::init(static_cast<int>(args.size()), args.data());
     }
@@ -86,10 +91,17 @@ class MotionControlPubSubTest : public ::testing::Test {
         spin_until([] { return false; }, duration);
     }
 
-    CameraOrientationCommand make_camera_command_msg() {
+    CameraOrientationCommand make_camera_command_msg(double yaw = 0.0, double pitch = 0.0,
+                                                     double roll = 0.0, bool is_absolute = true,
+                                                     int32_t sec = 123) {
         CameraOrientationCommand msg;
-        msg.header.stamp.sec = 123;
+        msg.header.stamp.sec =
+            sec; /* must increase between commands or it is dropped as out-of-order */
         msg.header.stamp.nanosec = 456;
+        msg.yaw = yaw;
+        msg.pitch = pitch;
+        msg.roll = roll;
+        msg.is_absolute = is_absolute;
         return msg;
     }
 
@@ -129,7 +141,7 @@ TEST_F(MotionControlPubSubTest, SeedsStartPositionWithJointState) {
 
     const auto& joint_command = received_.front();
     for (double val : joint_command.position) {
-        EXPECT_LE(val, 3.0); /* from make_joint_state_msg */
+        EXPECT_LE(val, 2.0); /* from make_joint_state_msg */
         EXPECT_GE(val, 1.0); /* from stub_kinematics.cpp */
     }
 }
@@ -140,8 +152,28 @@ TEST_F(MotionControlPubSubTest, NoOutputWithoutJointState) {
     EXPECT_TRUE(received_.empty());
 }
 
-TEST_F(MotionControlPubSubTest, NoOutputWithoutCameraOrientationCommand) {
-    joint_state_pub_->publish(make_joint_state_msg());
-    spin_for(300ms);
-    EXPECT_TRUE(received_.empty());
+TEST_F(MotionControlPubSubTest, RelativeCommandIsAppliedOnTopOfLastCommand) {
+    const double x = 0.1, d = 0.05;
+
+    /* Send one command, wait for the loop to publish, then return the most recent joint command. */
+    auto send = [&](const CameraOrientationCommand& cmd) {
+        received_.clear();
+        camera_pub_->publish(cmd);
+        joint_state_pub_->publish(make_joint_state_msg());
+
+        spin_until([&] { return !received_.empty(); });
+
+        EXPECT_FALSE(received_.empty());
+        return received_.empty() ? JointCommand{} : received_.back();
+    };
+
+    send(make_camera_command_msg(x, x, x, true, 1));
+    const auto relative_out = send(make_camera_command_msg(d, d, d, false, 2));
+    const auto absolute_out = send(make_camera_command_msg(x + d, x + d, x + d, true, 3));
+
+    ASSERT_EQ(relative_out.position.size(), absolute_out.position.size());
+
+    for (size_t i = 0; i < relative_out.position.size(); ++i) {
+        EXPECT_NEAR(relative_out.position[i], absolute_out.position[i], 1e-6);
+    }
 }

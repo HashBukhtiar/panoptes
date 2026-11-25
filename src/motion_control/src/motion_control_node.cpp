@@ -161,6 +161,24 @@ void MotionControlNode::on_camera_command(const CameraOrientationCommand::Shared
     }
 
     kinematics::CameraOrientation orientation{msg->yaw, msg->pitch, msg->roll};
+
+    if (!msg->is_absolute) {
+        auto base = kinematics::forward_kinematics(last_target_joint_angles_);
+        if (!base) {
+            // TODO: handle
+            return;
+        }
+        orientation.yaw += base->yaw;
+        orientation.pitch += base->pitch;
+        orientation.roll += base->roll;
+    }
+
+    if (!validation::valid_camera_orientation(orientation.yaw, orientation.pitch, orientation.roll,
+                                              CAMERA_MIN_RAD_, CAMERA_MAX_RAD_)) {
+        // TODO: handle
+        return;
+    }
+
     auto joint_angles = kinematics::inverse_kinematics(orientation);
 
     if (!joint_angles ||
