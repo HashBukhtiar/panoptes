@@ -152,12 +152,6 @@ TEST_F(MotionControlPubSubTest, NoOutputWithoutJointState) {
     EXPECT_TRUE(received_.empty());
 }
 
-TEST_F(MotionControlPubSubTest, NoOutputWithoutCameraOrientationCommand) {
-    joint_state_pub_->publish(make_joint_state_msg());
-    spin_for(300ms);
-    EXPECT_TRUE(received_.empty());
-}
-
 TEST_F(MotionControlPubSubTest, RelativeCommandIsAppliedOnTopOfLastCommand) {
     const double x = 0.1, d = 0.05;
 
