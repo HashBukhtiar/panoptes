@@ -44,6 +44,39 @@ python -m auto_detection_tracking --log logs/run1.csv
 
 Writes one CSV row per frame: capture time (`stamp_ns`), capture-to-command latency (`latency_ms`), the selected class and tracking `state`, the target's label, score and box, the angle offset (`yaw_deg`, `pitch_deg`, `off_centre_deg`), and every detection as JSON. It's for measuring DI-7, DI-8 and DI-9 in ADT-10. Only metadata is logged, never images (DI-22). `logs/` is gitignored. The top-right of the window shows FPS and the same latency.
 
+## Score a model on clips (ADT-5)
+
+`scripts/score_clips.py` measures a model on video clips without labelling any frames. For each clip you list the classes that are in it for the whole clip, so anything else the model reports is a mistake. Frames stay in memory; nothing is saved (DI-22).
+
+```bash
+cd src/auto_detection_tracking
+PYTHONPATH=. python scripts/score_clips.py --model path/to/best.pt --imgsz 1280 \
+    --classes syringe adson_forceps needle_driver \
+    --clip path/to/forceps_1.mov adson_forceps \
+    --clip path/to/all_1.mov syringe,adson_forceps,needle_driver
+```
+
+`--imgsz` is the model input size (default 640). Each class is tracked as if the operator selected it on the first frame, with the same `acquire_score`, `min_score` and `lost_after_s` as the app. Times are clip time, so they don't depend on how fast the computer is.
+
+Per clip, one row per class:
+
+| Column | Class in the clip | Class not in the clip |
+|---|---|---|
+| detected % | Frames where the model boxed it: the detection rate | Frames with a box for it anyway: a confusion (DI-8) |
+| tracked % | Frames where the tracker was locked on it | Should be 0; any lock is on the wrong object (DI-8) |
+| first lock (s) | Seconds until the tracker first locked on (DI-7 allows 3 s) | Should be "never" |
+
+Then a summary that adds up the clips with the same contents (for example all forceps-only takes):
+
+| Column | Meaning |
+|---|---|
+| takes | Number of clips in the group |
+| detected %, tracked % | As above, over all the group's frames |
+| locked in <=3 s | Clips where the tracker locked on within 3 s (DI-7). Want all of them for a class in the clips |
+| ever locked | Clips where it locked on at all. Want 0 for a class not in the clips (DI-8) |
+
+Without labels it can't tell which object a box is on: with several instruments in view, a "forceps" box on the needle driver still counts as detected. Labelled frames (`yolo detect val`) catch that.
+
 ## Test
 
 ```bash

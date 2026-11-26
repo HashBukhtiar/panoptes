@@ -29,7 +29,7 @@ def load(weights, classes, min_score, imgsz=640):
         # so a spoon can't also be reported as a lower-scoring "knife" (DI-8).
         # ponytail: would also drop one of two real instruments stacked almost exactly on top of
         # each other (overlap above Ultralytics' default 0.7); revisit if ADT-10 shows that.
-        r = model(bgr, classes=keep, conf=min_score, agnostic_nms=True, device=device, verbose=False)[0]
+        r = model(bgr, classes=keep, conf=min_score, agnostic_nms=True, imgsz=imgsz, device=device, verbose=False)[0]
         return [(r.names[int(c)], float(s), tuple(int(v) for v in box))
                 for c, s, box in zip(r.boxes.cls, r.boxes.conf, r.boxes.xyxy)]
     return detect

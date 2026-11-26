@@ -3,8 +3,6 @@
 Keys 1, 2, 3 select the configured classes in order as the target; 0 clears it.
 Run from src/auto_detection_tracking/:
     python -m auto_detection_tracking [--source SOURCE] [--log logs/run.csv]
-Run from src/auto_detection_tracking/:
-    python -m auto_detection_tracking [--source SOURCE] [--log logs/run.csv]
 """
 import argparse
 import time
