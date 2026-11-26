@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <chrono>
+#include <functional>
 
 #include "motion_control_test.hpp"
 
@@ -8,66 +9,85 @@ using namespace std::chrono_literals;
 
 class MotionControlFaultTest : public MotionControlTest {
    protected:
-    // static void SetUpTestSuite() {
-    //     auto params = default_param_args();
-    //     params.push_back("joint_max_rad:=[1.0,1.0,1.0]");
-    //     params.push_back("joint_state_max_age_ms:=50");
-    //     init_ros(params);
-    // }
-
-    JointState make_joint_state_msg() override {
-        auto msg = MotionControlTest::make_joint_state_msg();
-        msg.position = {2.9, 2.9, 2.9};
-        return msg;
+    static void SetUpTestSuite() {
+        auto params = default_param_args();
+        params.push_back("camera_command_max_age_ms:=500.0");
+        params.push_back("joint_state_max_age_ms:=500.0");
+        init_ros(params);
     }
 
-    void send_inputs_until_output() {
-        spin_until([this] {
-            camera_pub_->publish(make_camera_command_msg());
-            joint_state_pub_->publish(make_joint_state_msg());
-            return !joint_commands_received_.empty();
-        });
+    void publish_camera_command() {
+        publish_camera_command(make_camera_command_msg()); /* default (valid) */
+    }
+
+    void publish_camera_command(const CameraOrientationCommand& msg) {
+        camera_pub_->publish(msg);
+    }
+
+    void publish_joint_state() {
+        publish_joint_state(make_joint_state_msg()); /* default (valid) */
+    }
+
+    void publish_joint_state(const JointState& msg) {
+        joint_state_pub_->publish(msg);
+    }
+
+    bool no_output_after(const std::function<void()>& publish,
+                         std::chrono::milliseconds window = 300ms) {
+        publish();
+        spin_for(window);
+        return joint_commands_received_.empty();
     }
 };
 
-/* Single faults */
-TEST_F(MotionControlFaultTest, NullCameraCommandIsDroppedAndAlerts) {
-    ASSERT_TRUE(1);
-}
-
+/* Single CameraOrientationCommand faults */
 TEST_F(MotionControlFaultTest, MistypedCameraCommandIsDropped) {
-    ASSERT_TRUE(1);
+    GTEST_SKIP() << "not implemented";
 }
 
 TEST_F(MotionControlFaultTest, InvalidCameraCommandIsDroppedAndAlerts) {
-    ASSERT_TRUE(1);
+    // auto msg = make_camera_command_msg();
+    // msg.yaw = 99.0;
+
+    // EXPECT_TRUE(no_output_after([&] {
+    //     publish_camera_command(msg);
+    //     publish_joint_state();
+    // }));
+
+    GTEST_SKIP() << "not implemented";
 }
 
 TEST_F(MotionControlFaultTest, TooOldCameraCommandIsDroppedAndAlerts) {
-    ASSERT_TRUE(1);
+    GTEST_SKIP() << "not implemented";
 }
 
 TEST_F(MotionControlFaultTest, OutOfOrderCameraCommandIsDropped) {
-    ASSERT_TRUE(1);
+    GTEST_SKIP() << "not implemented";
 }
 
+/* Single JointState faults */
 TEST_F(MotionControlFaultTest, NullJointStateIsDropped) {
-    ASSERT_TRUE(1);
+    EXPECT_TRUE(no_output_after([&] { publish_joint_state(JointState{}); }));
 }
 
 TEST_F(MotionControlFaultTest, MistypedJointStateIsDropped) {
-    /* no alert expected because this is stopped at ros2's pub/sub stream, doesn't reach us */
-    ASSERT_TRUE(1);
+    GTEST_SKIP() << "not implemented";
 }
 
 TEST_F(MotionControlFaultTest, InvalidJointStateIsDropped) {
-    ASSERT_TRUE(1);
+    auto msg = make_joint_state_msg();
+    msg.position = {5.0, 5.0, 5.0};
+
+    EXPECT_TRUE(no_output_after([&] { publish_joint_state(msg); }));
 }
 
 TEST_F(MotionControlFaultTest, TooOldJointStateIsDropped) {
-    ASSERT_TRUE(1);
+    auto msg = make_joint_state_msg();
+    msg.header.stamp = peer_node_->now() - rclcpp::Duration::from_seconds(5.0);
+
+    EXPECT_TRUE(no_output_after([&] { publish_joint_state(msg); }));
 }
 
 TEST_F(MotionControlFaultTest, OutOfOrderJointStateIsDropped) {
-    ASSERT_TRUE(1);
+    GTEST_SKIP() << "not implemented";
 }

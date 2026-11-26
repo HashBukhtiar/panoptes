@@ -5,7 +5,8 @@
 #include "motion_control_test.hpp"
 
 using namespace std::chrono_literals;
-using MotionControlPubSubTest = MotionControlTest;
+
+class MotionControlPubSubTest : public MotionControlTest {};
 
 TEST_F(MotionControlPubSubTest, PublishesJointCommandWithOriginalTimestamp) {
     const auto camera_command = make_camera_command_msg();

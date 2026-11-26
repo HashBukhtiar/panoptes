@@ -33,12 +33,9 @@ class MotionControlTest : public ::testing::Test {
 
     /* Override normal configuration limits since tests use dummy inputs, not real data */
     static std::vector<std::string> default_param_args() {
-        return {
-            "camera_command_max_age_ms:=1e15",
-            "joint_state_max_age_ms:=1e15",
-            "joint_min_rad:=[-3.0,-3.0,-3.0]",
-            "joint_max_rad:=[3.0,3.0,3.0]",
-        };
+        return {"camera_command_max_age_ms:=1e15",  "joint_state_max_age_ms:=1e15",
+                "joint_min_rad:=[-3.0,-3.0,-3.0]",  "joint_max_rad:=[3.0,3.0,3.0]",
+                "camera_min_rad:=[-3.0,-3.0,-3.0]", "camera_max_rad:=[3.0,3.0,3.0]"};
     }
 
     static void init_ros(const std::vector<std::string>& param_overrides) {
@@ -107,15 +104,13 @@ class MotionControlTest : public ::testing::Test {
 
     virtual CameraOrientationCommand make_camera_command_msg() {
         CameraOrientationCommand msg;
-        msg.header.stamp.sec = 123;
-        msg.header.stamp.nanosec = 456;
+        msg.header.stamp = peer_node_->now();
         return msg;
     }
 
     virtual JointState make_joint_state_msg() {
         JointState msg;
-        msg.header.stamp.sec = 123;
-        msg.header.stamp.nanosec = 456;
+        msg.header.stamp = peer_node_->now();
         msg.position = {2.0, 2.0, 2.0};
         return msg;
     }
