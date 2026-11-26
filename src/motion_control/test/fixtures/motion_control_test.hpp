@@ -8,11 +8,7 @@
 #include <string>
 #include <vector>
 
-#include "interfaces/msg/camera_orientation_command.hpp"
-#include "interfaces/msg/joint_command.hpp"
 #include "motion_control/motion_control_node.hpp"
-#include "rclcpp/rclcpp.hpp"
-#include "sensor_msgs/msg/joint_state.hpp"
 
 using CameraOrientationCommand = interfaces::msg::CameraOrientationCommand;
 using JointCommand = interfaces::msg::JointCommand;

@@ -8,6 +8,12 @@
 using namespace std::chrono_literals;
 using State = MotionControlNode::State;
 
+/* Defined in test/stubs/stub_kinematics.cpp */
+namespace stub_kinematics {
+extern bool ik_fails;
+extern bool ik_out_of_range;
+}  // namespace stub_kinematics
+
 class MotionControlFaultTest : public MotionControlTest {
    protected:
     static void SetUpTestSuite() {
@@ -19,6 +25,11 @@ class MotionControlFaultTest : public MotionControlTest {
         params.push_back("joint_state_good_streak_min_ms:=500.0");
         params.push_back("hold_max_duration_ms:=2000.0");
         init_ros(params);
+    }
+
+    void TearDown() override {
+        stub_kinematics::ik_fails = false;
+        stub_kinematics::ik_out_of_range = false;
     }
 
     void publish_camera_command() {
@@ -212,6 +223,27 @@ TEST_F(MotionControlFaultTest, OutOfOrderCameraCommandIsDropped) {
     for (const auto& cmd : joint_commands_received_) {
         EXPECT_TRUE(has_stamp(cmd, younger.header.stamp));
     }
+}
+
+/* Single kinematics library faults */
+TEST_F(MotionControlFaultTest, ValidCameraCommandButFailedKinematicsIsDroppedAndAlerts) {
+    const auto seeded = seed_with_joint_state();
+
+    stub_kinematics::ik_fails = true;
+    publish_camera_command(make_camera_command_msg());
+
+    spin_for_and_expect_alert(300ms);
+    expect_joint_commands_unchanged(seeded);
+}
+
+TEST_F(MotionControlFaultTest, ValidCameraCommandButInvalidKinematicsIsDroppedAndAlerts) {
+    const auto seeded = seed_with_joint_state();
+
+    stub_kinematics::ik_out_of_range = true;
+    publish_camera_command(make_camera_command_msg());
+
+    spin_for_and_expect_alert(300ms);
+    expect_joint_commands_unchanged(seeded);
 }
 
 /* Single JointState faults */
