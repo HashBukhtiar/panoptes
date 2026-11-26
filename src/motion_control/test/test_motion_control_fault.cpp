@@ -33,16 +33,18 @@ class MotionControlFaultTest : public MotionControlTest {
     }
 
     /**
-     * Publishes once, watches for a fixed window, and expects no joint command to arrive.
+     * Watches the log for a fixed window, starting from when it's called, and expects a "[WARN]"
+     * alert. Note that the node only processes messages while the executor spins, so the alert
+     * fires inside this window as long as nothing spins in between!
      *
-     * @param publish Callable that publishes the messages under test.
-     * @param window How long to watch for output after publishing.
+     * @param window How long to watch for the alert.
      */
-    void expect_no_output_after(const std::function<void()>& publish,
-                                std::chrono::milliseconds window = 300ms) {
-        publish();
+    void spin_for_and_expect_alert(std::chrono::milliseconds window = 300ms) {
+        testing::internal::CaptureStderr();
         spin_for(window);
-        EXPECT_TRUE(joint_commands_received_.empty());
+        const std::string log = testing::internal::GetCapturedStderr();
+
+        EXPECT_NE(log.find("[WARN]"), std::string::npos);
     }
 
     /**
@@ -79,6 +81,19 @@ class MotionControlFaultTest : public MotionControlTest {
             }
         }
     }
+
+    /**
+     * Publishes once, watches for a fixed window, and expects no joint command to arrive.
+     *
+     * @param publish Callable that publishes the messages under test.
+     * @param window How long to watch for output after publishing.
+     */
+    void expect_no_output_after(const std::function<void()>& publish,
+                                std::chrono::milliseconds window = 300ms) {
+        publish();
+        spin_for(window);
+        EXPECT_TRUE(joint_commands_received_.empty());
+    }
 };
 
 /* Controls */
@@ -103,8 +118,8 @@ TEST_F(MotionControlFaultTest, InvalidCameraCommandIsDroppedAndAlerts) {
     auto msg = make_camera_command_msg();
     msg.yaw = 99.0;
     publish_camera_command(msg);
-    spin_for(300ms);
 
+    spin_for_and_expect_alert(300ms);
     expect_joint_commands_unchanged(seeded);
 }
 
@@ -114,8 +129,8 @@ TEST_F(MotionControlFaultTest, TooOldCameraCommandIsDroppedAndAlerts) {
     auto msg = make_camera_command_msg();
     msg.header.stamp = peer_node_->now() - rclcpp::Duration::from_seconds(10.0);
     publish_camera_command(msg);
-    spin_for(300ms);
 
+    spin_for_and_expect_alert(300ms);
     expect_joint_commands_unchanged(seeded);
 }
 
