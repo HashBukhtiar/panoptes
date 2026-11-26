@@ -1,67 +1,32 @@
 #include <gtest/gtest.h>
 
 #include <chrono>
-#include <functional>
-#include <vector>
 
-#include "interfaces/msg/camera_orientation_command.hpp"
-#include "interfaces/msg/joint_command.hpp"
-#include "motion_control/motion_control_node.hpp"
-#include "rclcpp/rclcpp.hpp"
-#include "sensor_msgs/msg/joint_state.hpp"
+#include "motion_control_test.hpp"
 
-using CameraOrientationCommand = interfaces::msg::CameraOrientationCommand;
-using JointCommand = interfaces::msg::JointCommand;
-using JointState = sensor_msgs::msg::JointState;
+using namespace std::chrono_literals;
 
-class MotionControlFaultTest : public ::testing::Test {
+class MotionControlFaultTest : public MotionControlTest {
    protected:
-    std::shared_ptr<MotionControlNode> motion_control_node_;
-    std::shared_ptr<rclcpp::Node> peer_node_;
+    // static void SetUpTestSuite() {
+    //     auto params = default_param_args();
+    //     params.push_back("joint_max_rad:=[1.0,1.0,1.0]");
+    //     params.push_back("joint_state_max_age_ms:=50");
+    //     init_ros(params);
+    // }
 
-    rclcpp::executors::SingleThreadedExecutor executor_;
-
-    rclcpp::Publisher<CameraOrientationCommand>::SharedPtr camera_pub_;
-    rclcpp::Publisher<JointState>::SharedPtr joint_state_pub_;
-    rclcpp::Subscription<JointCommand>::SharedPtr joint_command_sub_;
-
-    std::vector<JointCommand> received_;
-
-    static void SetUpTestSuite() {
-        /* Override normal configuration limits since this test uses dummy inputs, not real data */
-        const std::vector<const char*> args = {
-            "test_motion_control_pubsub",
-            "--ros-args",
-            "-p",
-            "camera_command_max_age_ms:=1e15",
-            "-p",
-            "joint_state_max_age_ms:=1e15",
-            "-p",
-            "joint_min_rad:=[-3.0,-3.0,-3.0]",
-            "-p",
-            "joint_max_rad:=[3.0,3.0,3.0]",
-        };
-        rclcpp::init(static_cast<int>(args.size()), args.data());
+    JointState make_joint_state_msg() override {
+        auto msg = MotionControlTest::make_joint_state_msg();
+        msg.position = {2.9, 2.9, 2.9};
+        return msg;
     }
 
-    static void TearDownTestSuite() {
-        rclcpp::shutdown();
-    }
-
-    void SetUp() override {
-        motion_control_node_ = std::make_shared<MotionControlNode>();
-        peer_node_ = std::make_shared<rclcpp::Node>("peer");
-
-        camera_pub_ = peer_node_->create_publisher<CameraOrientationCommand>(
-            "camera_orientation_command", rclcpp::QoS(1).best_effort());
-        joint_state_pub_ =
-            peer_node_->create_publisher<JointState>("joint_state", rclcpp::QoS(1).best_effort());
-        joint_command_sub_ = peer_node_->create_subscription<JointCommand>(
-            "joint_command", rclcpp::QoS(1).best_effort(),
-            [this](const JointCommand::SharedPtr msg) { received_.push_back(*msg); });
-
-        executor_.add_node(motion_control_node_);
-        executor_.add_node(peer_node_);
+    void send_inputs_until_output() {
+        spin_until([this] {
+            camera_pub_->publish(make_camera_command_msg());
+            joint_state_pub_->publish(make_joint_state_msg());
+            return !joint_commands_received_.empty();
+        });
     }
 };
 

@@ -119,9 +119,4 @@ class MotionControlTest : public ::testing::Test {
         msg.position = {2.0, 2.0, 2.0};
         return msg;
     }
-
-    // void publish_valid_inputs() {
-    //     camera_pub_->publish(make_camera_command_msg());
-    //     joint_state_pub_->publish(make_joint_state_msg());
-    // }
 };
