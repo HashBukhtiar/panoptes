@@ -14,6 +14,10 @@ class MotionControlFaultTest : public MotionControlTest {
         auto params = default_param_args();
         params.push_back("camera_command_max_age_ms:=5000.0");
         params.push_back("joint_state_max_age_ms:=5000.0");
+        params.push_back("joint_state_max_gap_ms:=100.0");
+        params.push_back("joint_state_fault_streak_max_ms:=500.0");
+        params.push_back("joint_state_good_streak_min_ms:=500.0");
+        params.push_back("hold_max_duration_ms:=2000.0");
         init_ros(params);
     }
 
@@ -33,6 +37,16 @@ class MotionControlFaultTest : public MotionControlTest {
         joint_state_pub_->publish(msg);
     }
 
+    /* Spins for the window, running `each_tick` on every step (e.g., to keep publishing). */
+    void spin_for_while(std::chrono::milliseconds window, const std::function<void()>& each_tick) {
+        spin_until(
+            [&] {
+                each_tick();
+                return false;
+            },
+            window);
+    }
+
     /**
      * Watches the log for a fixed window, starting from when it's called, and expects a "[WARN]"
      * alert. Note that the node only processes messages while the executor spins, so the alert
@@ -46,6 +60,29 @@ class MotionControlFaultTest : public MotionControlTest {
         const std::string log = testing::internal::GetCapturedStderr();
 
         EXPECT_NE(log.find("[WARN]"), std::string::npos);
+    }
+
+    /**
+     * Runs `body` and expects a "[WARN]" alert to be logged while it runs.
+     *
+     * Use this when the test must do more than just wait inside the window, e.g., keep publishing
+     * on every spin step (`expect_alert_during([&] { spin_for_while(700ms, publish_bad_msg); });`).
+     * `body` is responsible for spinning; the node only processes messages while the executor
+     * spins, so a `body` that never spins will see no alert.
+     *
+     * Contrast with spin_for_and_expect_alert(), which is the simple case: it does the spinning
+     * itself for a fixed window and publishes nothing. Use that one when you have already published
+     * and only need to wait for the alert.
+     *
+     * @param body Callable run while stderr is captured. Must spin the executor.
+     */
+    void expect_alert_during(const std::function<void()>& body,
+                             const std::string& text = "[WARN]") {
+        testing::internal::CaptureStderr();
+        body();
+        const std::string log = testing::internal::GetCapturedStderr();
+
+        EXPECT_NE(log.find(text), std::string::npos) << "log was:\n" << log;
     }
 
     /**
@@ -198,18 +235,72 @@ TEST_F(MotionControlFaultTest, OutOfOrderJointStateIsDropped) {
 }
 
 /* Continuous (timed) JointState faults */
-TEST_F(MotionControlFaultTest, PausedJointStateEntersHold) {
-    GTEST_SKIP() << "[TODO] not implemented yet";
+TEST_F(MotionControlFaultTest, ProlongedPausedJointStateEntersHold) {
+    seed_with_joint_state();
+
+    /* Bad streak timer running, not in hold yet */
+    spin_for(300ms);
+    EXPECT_EQ(motion_control_node_->get_state(), MotionControlNode::State::NORMAL);
+
+    /* Hold entered at approximately 100ms + 500ms + 0-10ms */
+    spin_for_and_expect_alert(700ms);
+    EXPECT_EQ(motion_control_node_->get_state(), MotionControlNode::State::HOLDING);
 }
 
 TEST_F(MotionControlFaultTest, BadJointStateStreakEntersHold) {
-    GTEST_SKIP() << "[TODO] not implemented yet";
+    seed_with_joint_state();
+
+    auto publish_bad_msg = [this] {
+        auto msg = make_joint_state_msg();
+        msg.position = {5.0, 5.0, 5.0};
+        publish_joint_state(msg);
+    };
+
+    /* Bad streak timer running, not in hold yet */
+    spin_for_while(300ms, publish_bad_msg);
+    EXPECT_EQ(motion_control_node_->get_state(), MotionControlNode::State::NORMAL);
+
+    /* Hold entered at approximately 500ms */
+    expect_alert_during([&] { spin_for_while(700ms, publish_bad_msg); });
+    EXPECT_EQ(motion_control_node_->get_state(), MotionControlNode::State::HOLDING);
 }
 
 TEST_F(MotionControlFaultTest, GoodJointStateStreakExitsHold) {
-    GTEST_SKIP() << "[TODO] not implemented yet";
+    seed_with_joint_state();
+
+    auto publish_bad_msg = [this] {
+        auto msg = make_joint_state_msg();
+        msg.position = {5.0, 5.0, 5.0};
+        publish_joint_state(msg);
+    };
+
+    auto publish_good_msg = [this] { publish_joint_state(make_joint_state_msg()); };
+
+    /* Bad streak timer running, not in hold yet */
+    spin_for_while(300ms, publish_bad_msg);
+    EXPECT_EQ(motion_control_node_->get_state(), MotionControlNode::State::NORMAL);
+
+    /* Hold entered at approximately 500ms */
+    expect_alert_during([&] { spin_for_while(700ms, publish_bad_msg); });
+    EXPECT_EQ(motion_control_node_->get_state(), MotionControlNode::State::HOLDING);
+
+    /* Good streak timer running, not exited hold yet */
+    spin_for_while(300ms, publish_good_msg);
+    EXPECT_EQ(motion_control_node_->get_state(), MotionControlNode::State::HOLDING);
+
+    /* Hold exited after approximately additional 500ms */
+    spin_for_while(500ms, publish_good_msg);
+    EXPECT_EQ(motion_control_node_->get_state(), MotionControlNode::State::NORMAL);
 }
 
 TEST_F(MotionControlFaultTest, ExtendedHoldTerminatesAndAlerts) {
-    GTEST_SKIP() << "[TODO] not implemented yet";
+    seed_with_joint_state();
+
+    /* Hold entered at approximately 600ms */
+    spin_for(700ms);
+    EXPECT_EQ(motion_control_node_->get_state(), MotionControlNode::State::HOLDING);
+
+    /* Terminal at approximately 2600ms */
+    expect_alert_during([&] { spin_for(2700ms); }, "[URGENT]");
+    EXPECT_EQ(motion_control_node_->get_state(), MotionControlNode::State::TERMINAL);
 }
