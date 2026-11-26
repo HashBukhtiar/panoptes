@@ -1,6 +1,6 @@
 # auto_detection_tracking
 
-Autonomous-mode vision: find the operator's selected instrument and keep it centred. So far it opens a camera source, shows it live (ADT-1), and boxes the configured objects with a pretrained YOLO model (ADT-3), lets you pick one as the target (ADT-6), follows it between frames (ADT-7), and shows the direction the camera should turn (ADT-8). It has six targets from two models (ADT-13): stand-ins (fork, spoon, knife) and the real instruments (syringe, Adson forceps, needle driver). See [Models](#models).
+Autonomous-mode vision: find the operator's selected instrument and keep it centred. So far it opens a camera source, shows it live (ADT-1), and boxes the configured objects with a pretrained YOLO model (ADT-3), lets you pick one as the target (ADT-6), follows it between frames (ADT-7), and shows the direction the camera should turn (ADT-8). It has six targets from two models (ADT-13): stand-ins (fork, spoon, knife) and the real instruments (syringe, Adson forceps, needle driver). See [Models](#models). Targets can be picked by key or by voice (AI-1, see [Voice](#voice-ai-1)).
 
 ## Setup (once, from the repo root)
 
@@ -36,6 +36,20 @@ Quit with `q`, `Esc`, or by closing the window. The window is the camera-active 
 
 On macOS, the first webcam run asks for camera permission for your terminal app and exits with "Could not open camera source" while the prompt is up. Allow it, then run again. If no prompt appears, turn your terminal app on under System Settings > Privacy & Security > Camera and restart the terminal. If index 0 opens the wrong camera (e.g. an iPhone through Continuity Camera), try `"1"`.
 
+## Voice (AI-1)
+
+Say **"track fork"**, **"track spoon"**, **"track knife"**, **"track syringe"**, **"track forceps"** or **"track needle driver"** to select a target, and **"stop tracking"** to clear it. Pause briefly before and after: only speech that is exactly one command counts, so a sentence like "now we'll track the forceps" is ignored. Press `m` to mute or unmute. The bottom line of the window shows MIC LISTENING or MIC MUTED, and the last command heard.
+
+Recognition runs offline on the laptop with [Vosk](https://alphacephei.com/vosk/) and is limited to these phrases. Audio is handled in memory 0.1 s at a time, never saved and never sent anywhere (DI-22). A command takes effect about 0.8 s after you stop speaking (the recognizer waits for a pause), which counts toward DI-7's 3 s. The words to say are the `spoken` lists in the config.
+
+The speech model isn't in git. Download it once into `src/auto_detection_tracking/` (41 MB, Apache-2.0):
+
+```bash
+curl -LO https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip && unzip vosk-model-small-en-us-0.15.zip && rm vosk-model-small-en-us-0.15.zip
+```
+
+If the model or a microphone is missing, the app says "Voice off" and the keyboard still works; `voice_model: ""` in the config turns voice off on purpose. The first run asks for microphone permission for your terminal app. If it was refused, macOS supplies silence instead of an error, and the window shows "mic is silent: check microphone permission": turn your terminal app on under System Settings > Privacy & Security > Microphone and restart the terminal.
+
 ## Models
 
 | Group | Keys | Weights | Input size | Classes |
@@ -55,7 +69,7 @@ Both files live in `src/auto_detection_tracking/` and are gitignored (`*.pt`). T
 python -m auto_detection_tracking --log logs/run1.csv
 ```
 
-Writes one CSV row per frame: capture time (`stamp_ns`), capture-to-command latency (`latency_ms`), the selected class and tracking `state`, the target's label, score and box, the angle offset (`yaw_deg`, `pitch_deg`, `off_centre_deg`), and every detection as JSON. It's for measuring DI-7, DI-8 and DI-9 in ADT-10. Only metadata is logged, never images (DI-22). `logs/` is gitignored. The top-right of the window shows FPS and the same latency.
+Writes one CSV row per frame: capture time (`stamp_ns`), capture-to-command latency (`latency_ms`), the selected class and tracking `state`, the target's label, score and box, the angle offset (`yaw_deg`, `pitch_deg`, `off_centre_deg`), and every detection as JSON. The first frame after a selection command also records the `command` (e.g. `key 5` or `voice: track forceps`) and `command_ns`, when it was given: the key press, or the end of speech. The time from `command_ns` to the first `tracking` row is the acquisition time (DI-7). It's for measuring DI-7, DI-8 and DI-9 in ADT-10. Only metadata is logged, never images (DI-22). `logs/` is gitignored. The top-right of the window shows FPS and the same latency.
 
 ## Score a model on clips (ADT-5)
 

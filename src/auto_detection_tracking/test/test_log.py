@@ -1,4 +1,5 @@
-"""ADT-9: one metadata row per frame, readable back from the CSV; no image data (DI-22)."""
+"""ADT-9: one metadata row per frame, readable back from the CSV; no image data (DI-22).
+AI-1: the frame after a selection command records the command and when it was given (DI-7)."""
 import csv
 import json
 import math
@@ -10,8 +11,10 @@ KNIFE = ("knife", 0.4, (50, 20, 70, 40))
 
 
 def test_row_with_a_target_fills_every_column():
-    row = frame_row(123, 45.67, "fork", "tracking", FORK, (math.radians(3), math.radians(-4)), [FORK, KNIFE])
+    row = frame_row(123, 45.67, "fork", "tracking", FORK, (math.radians(3), math.radians(-4)), [FORK, KNIFE],
+                    ("voice: track fork", 100))
     assert set(row) == set(FIELDS)
+    assert row["command"] == "voice: track fork" and row["command_ns"] == 100  # AI-1: when the command was given
     assert row["target_box"] == "10 20 30 40" and row["target_score"] == 0.812
     assert row["yaw_deg"] == 3.0 and row["pitch_deg"] == -4.0 and row["off_centre_deg"] == 4.99
     assert json.loads(row["detections"]) == [["fork", 0.812, [10, 20, 30, 40]], ["knife", 0.4, [50, 20, 70, 40]]]
