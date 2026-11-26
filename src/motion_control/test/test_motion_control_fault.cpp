@@ -6,6 +6,7 @@
 #include "motion_control_test.hpp"
 
 using namespace std::chrono_literals;
+using State = MotionControlNode::State;
 
 class MotionControlFaultTest : public MotionControlTest {
    protected:
@@ -194,4 +195,21 @@ TEST_F(MotionControlFaultTest, TooOldJointStateIsDropped) {
 TEST_F(MotionControlFaultTest, OutOfOrderJointStateIsDropped) {
     GTEST_SKIP() << "[TODO] not observable via pub/sub (seeding only happens on recalibration); "
                     "maybe unit test the stamp check instead";
+}
+
+/* Continuous (timed) JointState faults */
+TEST_F(MotionControlFaultTest, PausedJointStateEntersHold) {
+    GTEST_SKIP() << "[TODO] not implemented yet";
+}
+
+TEST_F(MotionControlFaultTest, BadJointStateStreakEntersHold) {
+    GTEST_SKIP() << "[TODO] not implemented yet";
+}
+
+TEST_F(MotionControlFaultTest, GoodJointStateStreakExitsHold) {
+    GTEST_SKIP() << "[TODO] not implemented yet";
+}
+
+TEST_F(MotionControlFaultTest, ExtendedHoldTerminatesAndAlerts) {
+    GTEST_SKIP() << "[TODO] not implemented yet";
 }

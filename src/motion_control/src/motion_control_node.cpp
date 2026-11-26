@@ -116,7 +116,6 @@ void MotionControlNode::update_state(LocalClockTime now) {
     if (timing::is_too_old(timing::get_ms_between(last_joint_state_time_, now),
                            JOINT_STATE_MAX_GAP_MS_)) {
         start_joint_state_fault_timer();
-        // TODO: message dropped??
     }
 
     if (state_ == State::NORMAL) {
