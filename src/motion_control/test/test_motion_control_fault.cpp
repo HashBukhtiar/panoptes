@@ -37,52 +37,60 @@ class MotionControlFaultTest : public MotionControlTest {
         joint_state_pub_->publish(msg);
     }
 
-    /* Spins for the window, running `each_tick` on every step (e.g., to keep publishing). */
-    void spin_for_while(std::chrono::milliseconds window, const std::function<void()>& each_tick) {
+    /**
+     * Spins the executor for the duration like spin_for(), but also runs `each_tick` on every spin
+     * step,to keep something  happening while time passes (e.g., publishing a message every step).
+     * Use spin_for() when nothing needs to happen during the wait.
+     *
+     * @param duration How long to spin.
+     * @param each_tick Callable run on every spin step.
+     */
+    void spin_for_while(std::chrono::milliseconds duration,
+                        const std::function<void()>& each_tick) {
         spin_until(
             [&] {
                 each_tick();
                 return false;
             },
-            window);
+            duration);
     }
 
     /**
-     * Watches the log for a fixed window, starting from when it's called, and expects a "[WARN]"
-     * alert. Note that the node only processes messages while the executor spins, so the alert
-     * fires inside this window as long as nothing spins in between!
+     * Spins the executor for the window, running `each_tick` on every spin step, and expects `text`
+     * to be logged during it. Use spin_for_and_expect_alert() instead when nothing needs to happen
+     * while waiting.
      *
-     * @param window How long to watch for the alert.
+     * Logging is captured only for the duration of the call, so earlier logs (e.g., from seeding)
+     * don't count. The node only processes messages while the executor spins.
+     *
+     * @param duration How long to spin and watch for the alert.
+     * @param each_tick Callable run on every spin step, including the first.
+     * @param text Substring expected in the log. Defaults to "[WARN]".
      */
-    void spin_for_and_expect_alert(std::chrono::milliseconds window = 300ms) {
+    void spin_for_while_and_expect_alert(std::chrono::milliseconds duration,
+                                         const std::function<void()>& each_tick,
+                                         const std::string& text = "[WARN]") {
         testing::internal::CaptureStderr();
-        spin_for(window);
-        const std::string log = testing::internal::GetCapturedStderr();
-
-        EXPECT_NE(log.find("[WARN]"), std::string::npos);
-    }
-
-    /**
-     * Runs `body` and expects a "[WARN]" alert to be logged while it runs.
-     *
-     * Use this when the test must do more than just wait inside the window, e.g., keep publishing
-     * on every spin step (`expect_alert_during([&] { spin_for_while(700ms, publish_bad_msg); });`).
-     * `body` is responsible for spinning; the node only processes messages while the executor
-     * spins, so a `body` that never spins will see no alert.
-     *
-     * Contrast with spin_for_and_expect_alert(), which is the simple case: it does the spinning
-     * itself for a fixed window and publishes nothing. Use that one when you have already published
-     * and only need to wait for the alert.
-     *
-     * @param body Callable run while stderr is captured. Must spin the executor.
-     */
-    void expect_alert_during(const std::function<void()>& body,
-                             const std::string& text = "[WARN]") {
-        testing::internal::CaptureStderr();
-        body();
+        spin_for_while(duration, each_tick);
         const std::string log = testing::internal::GetCapturedStderr();
 
         EXPECT_NE(log.find(text), std::string::npos) << "log was:\n" << log;
+    }
+
+    /**
+     * Spins the executor for the window and expects `text` to be logged during it.
+     * Publish first, then call this. Use spin_for_while_and_expect_alert() instead when something
+     * must keep happening while waiting (e.g., publishing every step).
+     *
+     * Logging is captured only for the duration of the call, so earlier logs (e.g., from seeding)
+     * don't count. The node only processes messages while the executor spins.
+     *
+     * @param duration How long to spin and watch for the alert.
+     * @param text Substring expected in the log. Defaults to "[WARN]".
+     */
+    void spin_for_and_expect_alert(std::chrono::milliseconds duration = 300ms,
+                                   const std::string& text = "[WARN]") {
+        spin_for_while_and_expect_alert(duration, [] {}, text);
     }
 
     /**
@@ -242,7 +250,7 @@ TEST_F(MotionControlFaultTest, ProlongedPausedJointStateEntersHold) {
     spin_for(300ms);
     EXPECT_EQ(motion_control_node_->get_state(), MotionControlNode::State::NORMAL);
 
-    /* Hold entered at approximately 100ms + 500ms + 0-10ms */
+    /* Hold entered at approximately 100ms + 500ms */
     spin_for_and_expect_alert(700ms);
     EXPECT_EQ(motion_control_node_->get_state(), MotionControlNode::State::HOLDING);
 }
@@ -261,7 +269,7 @@ TEST_F(MotionControlFaultTest, BadJointStateStreakEntersHold) {
     EXPECT_EQ(motion_control_node_->get_state(), MotionControlNode::State::NORMAL);
 
     /* Hold entered at approximately 500ms */
-    expect_alert_during([&] { spin_for_while(700ms, publish_bad_msg); });
+    spin_for_while_and_expect_alert(600ms, publish_bad_msg);
     EXPECT_EQ(motion_control_node_->get_state(), MotionControlNode::State::HOLDING);
 }
 
@@ -281,7 +289,7 @@ TEST_F(MotionControlFaultTest, GoodJointStateStreakExitsHold) {
     EXPECT_EQ(motion_control_node_->get_state(), MotionControlNode::State::NORMAL);
 
     /* Hold entered at approximately 500ms */
-    expect_alert_during([&] { spin_for_while(700ms, publish_bad_msg); });
+    spin_for_while_and_expect_alert(600ms, publish_bad_msg);
     EXPECT_EQ(motion_control_node_->get_state(), MotionControlNode::State::HOLDING);
 
     /* Good streak timer running, not exited hold yet */
@@ -289,18 +297,18 @@ TEST_F(MotionControlFaultTest, GoodJointStateStreakExitsHold) {
     EXPECT_EQ(motion_control_node_->get_state(), MotionControlNode::State::HOLDING);
 
     /* Hold exited after approximately additional 500ms */
-    spin_for_while(500ms, publish_good_msg);
+    spin_for_while(600ms, publish_good_msg);
     EXPECT_EQ(motion_control_node_->get_state(), MotionControlNode::State::NORMAL);
 }
 
 TEST_F(MotionControlFaultTest, ExtendedHoldTerminatesAndAlerts) {
     seed_with_joint_state();
 
-    /* Hold entered at approximately 600ms */
+    /* Hold entered at approximately 100ms + 500ms */
     spin_for(700ms);
     EXPECT_EQ(motion_control_node_->get_state(), MotionControlNode::State::HOLDING);
 
-    /* Terminal at approximately 2600ms */
-    expect_alert_during([&] { spin_for(2700ms); }, "[URGENT]");
+    /* Terminal after approximately 2000ms */
+    spin_for_and_expect_alert(2100ms, "[URGENT]");
     EXPECT_EQ(motion_control_node_->get_state(), MotionControlNode::State::TERMINAL);
 }
