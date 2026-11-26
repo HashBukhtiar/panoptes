@@ -1,6 +1,7 @@
 """Show the configured camera source in a live window, with detections boxed.
 
-Keys 1, 2, 3 select the configured classes in order as the target; 0 clears it.
+Keys 1-6 select the configured classes (stand-ins, then instruments) as the target; 0 clears it.
+Only the model that owns the selected class runs (ADT-13).
 Run from src/auto_detection_tracking/:
     python -m auto_detection_tracking [--source SOURCE] [--log logs/run.csv]
 """
@@ -50,10 +51,19 @@ def main():
     args = parser.parse_args()
     params = yaml.safe_load(CONFIG.read_text())["auto_detection_tracking"]["ros__parameters"]
     source = args.source or params["source"]
-    classes = params["classes"]
-    # Load the model before opening the camera, so the camera isn't on while the model loads.
-    print(f"Loading {params['model']}...", flush=True)
-    detect = detector.load(params["model"], classes, params["min_score"])
+    groups = {name: params[name] for name in params["detectors"]}
+    owner = detector.owners((name, g["classes"]) for name, g in groups.items())
+    classes = list(owner)  # every target, in key order
+    # Load the models before opening the camera, so the camera isn't on while they load.
+    detect = {}
+    for name, g in groups.items():
+        print(f"Loading {g['model']}...", flush=True)
+        try:
+            detect[name] = detector.load(g["model"], g["classes"], params["min_score"], g["imgsz"])
+        except FileNotFoundError as e:
+            raise SystemExit(f"{e}. Trained weights aren't in git: see README 'Models'.") from None
+    # Running one model at a time keeps 30 fps; the first group runs until a target from another is picked.
+    active = params["detectors"][0]
     print(f"Showing {source} in a new window (q or Esc to quit)", flush=True)
     tracker = Tracker(params["lost_after_s"], params["acquire_score"])  # nothing targeted until the operator picks (DI-7)
     log_file, log = open_log(args.log) if args.log else (None, None)
@@ -63,7 +73,7 @@ def main():
     try:
         with closing(frames(source)) as stream:
             for stamp_ns, image in stream:
-                detections = detect(image)
+                detections = detect[active](image)
                 state, target = tracker.update(detections, stamp_ns)
                 angles = None
                 if target:  # tracking, holding or lost: the command ADT-12 will publish
@@ -101,6 +111,7 @@ def main():
                     break
                 if ord("1") <= key < ord("1") + len(classes):
                     tracker.select(classes[key - ord("1")])
+                    active = owner[tracker.label]
                 elif key == ord("0"):
                     tracker.select(None)
     except KeyboardInterrupt:

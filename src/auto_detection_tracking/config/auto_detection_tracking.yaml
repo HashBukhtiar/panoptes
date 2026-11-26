@@ -2,8 +2,15 @@ auto_detection_tracking:
   ros__parameters:
     source: "0" # webcam index or video file path; always a string so the ROS 2 type never changes
 
-    model: "yolo26n.pt" # pretrained COCO model (ADT-3); replaced by our own weights in ADT-5
-    classes: ["fork", "spoon", "knife"] # stand-ins until the instruments arrive; keys 1-3 select them in order
+    detectors: ["stand_ins", "instruments"] # keys 1-6 select these groups' classes in this order; only the selected target's group runs
+    stand_ins:
+      model: "yolo26n.pt" # pretrained COCO model (ADT-3), downloaded on first run
+      classes: ["fork", "spoon", "knife"]
+      imgsz: 640 # model input size
+    instruments:
+      model: "instruments-public-v1.pt" # YOLO26n fine-tuned on public data only (ADT-5); not in git, see README "Models"
+      classes: ["syringe", "adson_forceps", "needle_driver"]
+      imgsz: 1280 # the instruments are small in frame; 1280 finds more of them (15 ms vs 9.5 ms per frame, Nov 24)
     min_score: 0.25 # detections scoring below this are dropped
     acquire_score: 0.5 # min score to start tracking a target (following uses min_score); placeholder, tune in ADT-10
 

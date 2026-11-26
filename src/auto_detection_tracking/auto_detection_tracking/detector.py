@@ -1,4 +1,5 @@
 """Object detector: an Ultralytics YOLO model, limited to the configured classes (ADT-3)."""
+import numpy as np
 import torch
 from ultralytics import YOLO
 
@@ -10,6 +11,18 @@ def class_ids(names, wanted):
     if missing:
         raise ValueError(f"Model has no class {missing}. Known classes: {sorted(ids)}")
     return [ids[name] for name in wanted]
+
+
+def owners(groups):
+    """{class: group} for [(group, classes), ...], in order (ADT-13). A class in two groups fails loudly,
+    since the app couldn't tell which model to run for it."""
+    owner = {}
+    for group, classes in groups:
+        for c in classes:
+            if c in owner:
+                raise ValueError(f"Class {c!r} is in both {owner[c]!r} and {group!r}")
+            owner[c] = group
+    return owner
 
 
 def load(weights, classes, min_score, imgsz=640):
@@ -32,4 +45,9 @@ def load(weights, classes, min_score, imgsz=640):
         r = model(bgr, classes=keep, conf=min_score, agnostic_nms=True, imgsz=imgsz, device=device, verbose=False)[0]
         return [(r.names[int(c)], float(s), tuple(int(v) for v in box))
                 for c, s, box in zip(r.boxes.cls, r.boxes.conf, r.boxes.xyxy)]
+
+    # The first call takes ~1 s of one-off setup. Pay it here, not on a live frame, where it would
+    # freeze the video and eat into DI-7's 3 s. ponytail: warmed for 1280x720 frames (the webcam);
+    # another frame shape pays a smaller first-call cost.
+    detect(np.zeros((720, 1280, 3), np.uint8))
     return detect
