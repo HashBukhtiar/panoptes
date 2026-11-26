@@ -43,7 +43,7 @@ On macOS, the first webcam run asks for camera permission for your terminal app 
 | `stand_ins` | 1-3 | `yolo26n.pt`: YOLO26n pretrained on COCO, downloaded on first run | 640 | fork, spoon, knife |
 | `instruments` | 4-6 | `instruments-public-v1.pt`: YOLO26n fine-tuned on public data (ADT-5) | 1280 | syringe, adson_forceps, needle_driver |
 
-Both files live in `src/auto_detection_tracking/` and are gitignored (`*.pt`). The instrument weights aren't downloadable: copy `instruments-public-v1.pt` from the team's Teams files into that folder. Without it the app stops with "No such file or directory: 'instruments-public-v1.pt'".
+Both files live in `src/auto_detection_tracking/` and are gitignored (`*.pt`). The instrument weights aren't downloadable: copy `instruments-public-v1.pt` from Teams (Documents > Team_01-DHF > 04. Design > 04. Software) into that folder. Without it the app stops with "No such file or directory: 'instruments-public-v1.pt'".
 
 **How good the instrument model is:** it has seen public photos only, none of ours. On 26 labelled webcam frames of our instruments at 60-90 cm (score threshold 0.25, input 1280) it found 5 of 10 syringes, 10 of 15 forceps and 0 of 14 needle drivers, and once called a syringe forceps. The public photos are close-ups (an instrument fills about 40% of the image, against 10-18% in ours), and their needle holders look different from ours. Training on our own photos waits for the ZED camera.
 
