@@ -12,11 +12,12 @@ def class_ids(names, wanted):
     return [ids[name] for name in wanted]
 
 
-def load(weights, classes, min_score):
+def load(weights, classes, min_score, imgsz=640):
     """Return detect(bgr_image) -> [(label, score, (x1, y1, x2, y2)), ...] in pixels.
 
     weights: a model file; Ultralytics downloads its own pretrained ones (e.g. yolo26n.pt)
     into the current folder on first use.
+    imgsz: the size frames are resized to for the model. Larger finds smaller objects but is slower.
     """
     model = YOLO(weights)
     keep = class_ids(model.names, classes)
@@ -28,7 +29,7 @@ def load(weights, classes, min_score):
         # so a spoon can't also be reported as a lower-scoring "knife" (DI-8).
         # ponytail: would also drop one of two real instruments stacked almost exactly on top of
         # each other (overlap above Ultralytics' default 0.7); revisit if ADT-10 shows that.
-        r = model(bgr, classes=keep, conf=min_score, agnostic_nms=True, device=device, verbose=False)[0]
+        r = model(bgr, classes=keep, conf=min_score, agnostic_nms=True, imgsz=imgsz, device=device, verbose=False)[0]
         return [(r.names[int(c)], float(s), tuple(int(v) for v in box))
                 for c, s, box in zip(r.boxes.cls, r.boxes.conf, r.boxes.xyxy)]
     return detect
