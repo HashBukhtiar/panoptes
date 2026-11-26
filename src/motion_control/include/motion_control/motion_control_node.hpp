@@ -29,9 +29,19 @@ class MotionControlNode : public rclcpp::Node {
    public:
     MotionControlNode();
 
-   private:
-    /* Types and state */
     enum class State { CALIBRATING, NORMAL, HOLDING, TERMINAL };
+
+    /**
+     * Exposes a read-only version of the node's current state, intended for test purposes.
+     *
+     * @return The current State (CALIBRATING, NORMAL, HOLDING, or TERMINAL).
+     */
+    State get_state() const {
+        return state_;
+    }
+
+   private:
+    /* State */
     State state_ = State::CALIBRATING;
 
     /* Configuration - command generation frequency */
