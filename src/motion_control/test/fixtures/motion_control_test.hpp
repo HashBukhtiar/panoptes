@@ -29,9 +29,16 @@ class MotionControlTest : public ::testing::Test {
 
     /* Override normal configuration limits since tests use dummy inputs, not real data */
     static std::vector<std::string> default_param_args() {
-        return {"camera_command_max_age_ms:=1e15",  "joint_state_max_age_ms:=1e15",
-                "joint_min_rad:=[-3.0,-3.0,-3.0]",  "joint_max_rad:=[3.0,3.0,3.0]",
-                "camera_min_rad:=[-3.0,-3.0,-3.0]", "camera_max_rad:=[3.0,3.0,3.0]"};
+        return {
+            "camera_command_max_age_ms:=1e15", /* Effectively disables staleness checks */
+            "joint_state_max_age_ms:=1e15",
+            "joint_min_rad:=[-3.0,-3.0,-3.0]", /* Wide limits so test messages are always valid */
+            "joint_max_rad:=[3.0,3.0,3.0]",
+            "camera_min_rad:=[-3.0,-3.0,-3.0]",
+            "camera_max_rad:=[3.0,3.0,3.0]",
+            "max_speed_rad_s:=1000.0", /* No ramping (camera commands become joint commands
+                                          directly, so outputs don't depend on tick timing) */
+        };
     }
 
     static void init_ros(const std::vector<std::string>& param_overrides) {
