@@ -60,6 +60,7 @@ if(BUILD_TESTING)
     target_include_directories(test_motion_control_pubsub PRIVATE
         include
         ${KINEMATICS_INCLUDE_DIRS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/fixtures
     )
     target_link_libraries(test_motion_control_pubsub
         rclcpp::rclcpp
@@ -79,6 +80,7 @@ if(BUILD_TESTING)
     target_include_directories(test_motion_control_fault PRIVATE
         include
         ${KINEMATICS_INCLUDE_DIRS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/fixtures
     )
     target_link_libraries(test_motion_control_fault
         rclcpp::rclcpp

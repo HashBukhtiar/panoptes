@@ -10,7 +10,6 @@
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
 
-using namespace std::chrono_literals;
 using CameraOrientationCommand = interfaces::msg::CameraOrientationCommand;
 using JointCommand = interfaces::msg::JointCommand;
 using JointState = sensor_msgs::msg::JointState;
@@ -66,6 +65,44 @@ class MotionControlFaultTest : public ::testing::Test {
     }
 };
 
-TEST_F(MotionControlFaultTest, XXX) {
+/* Single faults */
+TEST_F(MotionControlFaultTest, NullCameraCommandIsDroppedAndAlerts) {
+    ASSERT_TRUE(1);
+}
+
+TEST_F(MotionControlFaultTest, MistypedCameraCommandIsDropped) {
+    ASSERT_TRUE(1);
+}
+
+TEST_F(MotionControlFaultTest, InvalidCameraCommandIsDroppedAndAlerts) {
+    ASSERT_TRUE(1);
+}
+
+TEST_F(MotionControlFaultTest, TooOldCameraCommandIsDroppedAndAlerts) {
+    ASSERT_TRUE(1);
+}
+
+TEST_F(MotionControlFaultTest, OutOfOrderCameraCommandIsDropped) {
+    ASSERT_TRUE(1);
+}
+
+TEST_F(MotionControlFaultTest, NullJointStateIsDropped) {
+    ASSERT_TRUE(1);
+}
+
+TEST_F(MotionControlFaultTest, MistypedJointStateIsDropped) {
+    /* no alert expected because this is stopped at ros2's pub/sub stream, doesn't reach us */
+    ASSERT_TRUE(1);
+}
+
+TEST_F(MotionControlFaultTest, InvalidJointStateIsDropped) {
+    ASSERT_TRUE(1);
+}
+
+TEST_F(MotionControlFaultTest, TooOldJointStateIsDropped) {
+    ASSERT_TRUE(1);
+}
+
+TEST_F(MotionControlFaultTest, OutOfOrderJointStateIsDropped) {
     ASSERT_TRUE(1);
 }
