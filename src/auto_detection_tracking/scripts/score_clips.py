@@ -8,10 +8,11 @@ Each clip lists the classes physically in it for the whole clip. Per clip it rep
   For a class not in the clip it should never lock.
 Then a summary over all clips with the same contents: how many takes locked each class within 3 s
 (DI-7) and how many ever locked it (should be 0 for a class not in them, DI-8).
-Frames are processed in memory only; nothing is saved (DI-22).
+Frames are processed in memory only; nothing is saved (DI-22). README "Score a model on clips"
+explains each column.
 
 Run from src/auto_detection_tracking/:
-    python scripts/score_clips.py --model PATH/best.pt --classes syringe adson_forceps needle_driver \
+    PYTHONPATH=. python scripts/score_clips.py --model PATH/best.pt --classes syringe adson_forceps needle_driver \
         --clip forceps.mov adson_forceps --clip all.mov syringe,adson_forceps,needle_driver
 """
 import argparse
@@ -46,6 +47,8 @@ def score(detect, clip, present, classes, params):
                 first_lock.setdefault(c, frames / fps)
         frames += 1
     cap.release()
+    if frames == 0:  # OpenCV doesn't raise on a bad path; it just reads nothing
+        raise SystemExit(f"Could not read any frames from {clip!r}: check the path.")
     print(f"\n### {clip}  ({frames} frames; in clip: {', '.join(present)})\n")
     print("| class | in clip | detected % | tracked % | first lock (s) |\n|---|---|---|---|---|")
     for c in classes:
