@@ -1,6 +1,6 @@
 # auto_detection_tracking
 
-Autonomous-mode vision: find the operator's selected instrument and keep it centred. So far it opens a camera source, shows it live (ADT-1), and boxes the configured objects with a pretrained YOLO model (ADT-3), lets you pick one as the target (ADT-6), follows it between frames (ADT-7), and shows the direction the camera should turn (ADT-8). Until the real instruments arrive, the configured objects are stand-ins: fork, spoon and knife.
+Autonomous-mode vision: find the operator's selected instrument and keep it centred. So far it opens a camera source, shows it live (ADT-1), and boxes the configured objects with a pretrained YOLO model (ADT-3), lets you pick one as the target (ADT-6), follows it between frames (ADT-7), and shows the direction the camera should turn (ADT-8). It has six targets from two models (ADT-13): stand-ins (fork, spoon, knife) and the real instruments (syringe, Adson forceps, needle driver). See [Models](#models).
 
 ## Setup (once, from the repo root)
 
@@ -21,9 +21,9 @@ python -m auto_detection_tracking --source path/to/clip.mov       # or a video f
 
 Your prompt shows `(.venv)` once the environment is active. `ModuleNotFoundError: No module named 'cv2'` means it isn't: run the `source` line again. Already in `src/auto_detection_tracking`? Use `source ../../.venv/bin/activate` instead.
 
-Pick the source in `config/auto_detection_tracking.yaml`: a webcam index (`"0"`) or a path to a video file. To try a different source without editing the file, pass `--source`, e.g. `python -m auto_detection_tracking --source path/to/clip.mov`. Relative paths are resolved from the folder you run in. Video files play at their own frame rate. The same file sets the model, which labels to box (`classes`), and the minimum score. The first run downloads the model weights into the folder you run from; `*.pt` files are gitignored.
+Pick the source in `config/auto_detection_tracking.yaml`: a webcam index (`"0"`) or a path to a video file. To try a different source without editing the file, pass `--source`, e.g. `python -m auto_detection_tracking --source path/to/clip.mov`. Relative paths are resolved from the folder you run in. Video files play at their own frame rate. The same file sets the models, which labels each one boxes (`classes`), and the minimum score.
 
-Press `1`, `2` or `3` to make a class the target (in the order listed under `classes`), and `0` to clear it. The target gets a thick green box; other detected objects get thin grey boxes and are ignored (DI-8). The status line shows the tracking state:
+Press `1` to `6` to make a class the target (in the order listed under `detectors`: fork, spoon, knife, syringe, adson_forceps, needle_driver), and `0` to clear it. Only the model that owns the selected target runs, which keeps the video at 30 fps; picking a target from the other group switches models. The target gets a thick green box; other detected objects get thin grey boxes and are ignored (DI-8). The status line shows the tracking state:
 
 - **searching**: not yet seen with a score of at least `acquire_score` since you selected it. Requiring a confident box to start keeps weak look-alikes from being picked up (DI-8).
 - **tracking** (green box): detected this frame. Once found, the target follows the box nearest its last position, so a higher-scoring look-alike elsewhere doesn't steal it.
@@ -35,6 +35,19 @@ Under the status, a second line stands in for the camera command until there's a
 Quit with `q`, `Esc`, or by closing the window. The window is the camera-active indicator (DI-22): the camera is open only while the window is showing, and nothing is recorded.
 
 On macOS, the first webcam run asks for camera permission for your terminal app and exits with "Could not open camera source" while the prompt is up. Allow it, then run again. If no prompt appears, turn your terminal app on under System Settings > Privacy & Security > Camera and restart the terminal. If index 0 opens the wrong camera (e.g. an iPhone through Continuity Camera), try `"1"`.
+
+## Models
+
+| Group | Keys | Weights | Input size | Classes |
+|---|---|---|---|---|
+| `stand_ins` | 1-3 | `yolo26n.pt`: YOLO26n pretrained on COCO, downloaded on first run | 640 | fork, spoon, knife |
+| `instruments` | 4-6 | `instruments-public-v1.pt`: YOLO26n fine-tuned on public data (ADT-5) | 1280 | syringe, adson_forceps, needle_driver |
+
+Both files live in `src/auto_detection_tracking/` and are gitignored (`*.pt`). The instrument weights aren't downloadable: copy `instruments-public-v1.pt` from the team's Teams files into that folder. Without it the app stops with "No such file or directory: 'instruments-public-v1.pt'".
+
+**How good the instrument model is:** it has seen public photos only, none of ours. On 26 labelled webcam frames of our instruments at 60-90 cm (score threshold 0.25, input 1280) it found 5 of 10 syringes, 10 of 15 forceps and 0 of 14 needle drivers, and once called a syringe forceps. The public photos are close-ups (an instrument fills about 40% of the image, against 10-18% in ours), and their needle holders look different from ours. Training on our own photos waits for the ZED camera.
+
+**Training data (CC BY 4.0):** [surgical_tool_detection_6class](https://universe.roboflow.com/mj-4iyes/surgical_tool_detection_6class) by mj-4iyes (its Forcep and Needle_holder classes) and [syringe](https://universe.roboflow.com/syringe-project/syringe-tovbf) by syringe-project, both on Roboflow Universe. Changes: other classes dropped, polygon outlines converted to boxes, merged with `python -m auto_detection_tracking.dataset`, then trained with `yolo detect train model=yolo26n.pt epochs=30 imgsz=640`.
 
 ## Log a run (ADT-9)
 
