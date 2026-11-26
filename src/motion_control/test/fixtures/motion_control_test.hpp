@@ -98,16 +98,22 @@ class MotionControlTest : public ::testing::Test {
         spin_until([] { return false; }, duration);
     }
 
-    virtual CameraOrientationCommand make_camera_command_msg() {
+    virtual CameraOrientationCommand make_camera_command_msg(double yaw = 0.0, double pitch = 0.0,
+                                                             double roll = 0.0,
+                                                             bool is_absolute = true) {
         CameraOrientationCommand msg;
         msg.header.stamp = peer_node_->now();
+        msg.yaw = yaw;
+        msg.pitch = pitch;
+        msg.roll = roll;
+        msg.is_absolute = is_absolute;
         return msg;
     }
 
-    virtual JointState make_joint_state_msg() {
+    virtual JointState make_joint_state_msg(const std::vector<double>& position = {2.0, 2.0, 2.0}) {
         JointState msg;
         msg.header.stamp = peer_node_->now();
-        msg.position = {2.0, 2.0, 2.0};
+        msg.position = position;
         return msg;
     }
 };

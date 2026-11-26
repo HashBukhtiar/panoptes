@@ -67,9 +67,9 @@ TEST_F(MotionControlPubSubTest, RelativeCommandIsAppliedOnTopOfLastCommand) {
         return joint_commands_received_.empty() ? JointCommand{} : joint_commands_received_.back();
     };
 
-    send(make_camera_command_msg(x, x, x, true, 1));
-    const auto relative_out = send(make_camera_command_msg(d, d, d, false, 2));
-    const auto absolute_out = send(make_camera_command_msg(x + d, x + d, x + d, true, 3));
+    send(make_camera_command_msg(x, x, x, true));
+    const auto relative_out = send(make_camera_command_msg(d, d, d, false));
+    const auto absolute_out = send(make_camera_command_msg(x + d, x + d, x + d, true));
 
     ASSERT_EQ(relative_out.position.size(), absolute_out.position.size());
 

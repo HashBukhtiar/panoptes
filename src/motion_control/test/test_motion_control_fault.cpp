@@ -172,8 +172,7 @@ TEST_F(MotionControlFaultTest, MistypedCameraCommandIsDropped) {
 TEST_F(MotionControlFaultTest, InvalidCameraCommandIsDroppedAndAlerts) {
     const auto seeded = seed_with_joint_state();
 
-    auto msg = make_camera_command_msg();
-    msg.yaw = 99.0;
+    auto msg = make_camera_command_msg(99.0);
     publish_camera_command(msg);
 
     spin_for_and_expect_alert(300ms);
@@ -256,9 +255,7 @@ TEST_F(MotionControlFaultTest, MistypedJointStateIsDropped) {
 }
 
 TEST_F(MotionControlFaultTest, InvalidJointStateIsDropped) {
-    auto msg = make_joint_state_msg();
-    msg.position = {5.0, 5.0, 5.0};
-
+    auto msg = make_joint_state_msg({5.0, 5.0, 5.0});
     expect_no_output_after([&] { publish_joint_state(msg); });
 }
 
@@ -291,8 +288,7 @@ TEST_F(MotionControlFaultTest, BadJointStateStreakEntersHold) {
     seed_with_joint_state();
 
     auto publish_bad_msg = [this] {
-        auto msg = make_joint_state_msg();
-        msg.position = {5.0, 5.0, 5.0};
+        auto msg = make_joint_state_msg({5.0, 5.0, 5.0});
         publish_joint_state(msg);
     };
 
@@ -309,8 +305,7 @@ TEST_F(MotionControlFaultTest, GoodJointStateStreakExitsHold) {
     seed_with_joint_state();
 
     auto publish_bad_msg = [this] {
-        auto msg = make_joint_state_msg();
-        msg.position = {5.0, 5.0, 5.0};
+        auto msg = make_joint_state_msg({5.0, 5.0, 5.0});
         publish_joint_state(msg);
     };
 
