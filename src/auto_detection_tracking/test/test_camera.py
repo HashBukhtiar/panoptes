@@ -29,3 +29,23 @@ def test_video_file_yields_every_frame_paced_to_its_fps(tmp_path):
 def test_missing_file_raises():
     with pytest.raises(RuntimeError):
         next(frames("does-not-exist.avi"))
+
+
+class OpensButGivesNoFrames:  # a webcam that's busy or isn't really streaming
+    def __init__(self, index):
+        pass
+
+    def isOpened(self):
+        return True
+
+    def grab(self):
+        return False
+
+    def release(self):
+        pass
+
+
+def test_webcam_that_gives_no_frames_says_so_instead_of_stopping_silently(monkeypatch):
+    monkeypatch.setattr(cv2, "VideoCapture", OpensButGivesNoFrames)
+    with pytest.raises(RuntimeError, match="stopped giving frames after 0"):
+        next(frames("0"))
