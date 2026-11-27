@@ -5,6 +5,8 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+option(BUILD_DEMO "Build motion control demo executables" OFF)
+
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -39,8 +41,32 @@ target_link_libraries(motion_control_node PRIVATE
 install(TARGETS motion_control_node DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
 
+if(BUILD_DEMO)
+    add_executable(dummy_operator demo/dummy_operator.cpp)
+    target_link_libraries(dummy_operator PRIVATE
+        rclcpp::rclcpp
+        ${interfaces_TARGETS}
+    )
+
+    add_executable(dummy_actuator demo/dummy_actuator.cpp)
+    target_link_libraries(dummy_actuator PRIVATE
+        rclcpp::rclcpp
+        ${interfaces_TARGETS}
+    )
+
+    install(TARGETS
+        dummy_operator
+        dummy_actuator
+        DESTINATION lib/${PROJECT_NAME}
+    )
+endif()
+
 if(BUILD_TESTING)
     find_package(ament_cmake_gtest REQUIRED)
+
+    # get kinematics include directories without linking real implementation
+    get_target_property(KINEMATICS_INCLUDE_DIRS kinematics::kinematics
+        INTERFACE_INCLUDE_DIRECTORIES)
 
     # test_trajectory
     ament_add_gtest(test_trajectory
@@ -49,9 +75,6 @@ if(BUILD_TESTING)
     target_include_directories(test_trajectory PRIVATE include)
 
     # test_motion_control_pubsub
-    get_target_property(KINEMATICS_INCLUDE_DIRS kinematics::kinematics
-        INTERFACE_INCLUDE_DIRECTORIES)
-
     ament_add_gtest(test_motion_control_pubsub
         test/test_motion_control_pubsub.cpp
         test/stubs/stub_kinematics.cpp
@@ -69,9 +92,6 @@ if(BUILD_TESTING)
     )
 
     # test_motion_control_fault
-    get_target_property(KINEMATICS_INCLUDE_DIRS kinematics::kinematics
-        INTERFACE_INCLUDE_DIRECTORIES)
-
     ament_add_gtest(test_motion_control_fault
         test/test_motion_control_fault.cpp
         test/stubs/stub_kinematics.cpp
@@ -89,9 +109,6 @@ if(BUILD_TESTING)
     )
 
     # test_motion_control_state
-    get_target_property(KINEMATICS_INCLUDE_DIRS kinematics::kinematics
-        INTERFACE_INCLUDE_DIRECTORIES)
-
     ament_add_gtest(test_motion_control_state
         test/test_motion_control_state.cpp
         test/stubs/stub_kinematics.cpp
