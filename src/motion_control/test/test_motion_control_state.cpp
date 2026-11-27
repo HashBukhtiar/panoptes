@@ -50,6 +50,7 @@ TEST_F(MotionControlStateTest, NormalStatePublishesNewCameraOrientationCommand) 
     spin_for(300ms);
 
     ASSERT_FALSE(joint_commands_received_.empty());
+    ASSERT_EQ(motion_control_node_->get_state(), State::NORMAL);
     EXPECT_NE(joint_commands_received_.back().position, initial_state);
 }
 
@@ -60,11 +61,36 @@ TEST_F(MotionControlStateTest, HoldStateRepublishesOldCameraOrientationCommand) 
     publish_camera_command(make_camera_command_msg());
     spin_for(300ms);
 
+    ASSERT_EQ(motion_control_node_->get_state(), State::HOLDING);
     expect_all_joint_commands_to_equal(initial_state);
 }
 
 TEST_F(MotionControlStateTest, HoldToNormalReseedsJointState) {
-    GTEST_SKIP() << "[TODO] not implemented yet";
+    const auto initial_state = seed_with_joint_state();
+
+    std::vector<double> new_state = initial_state;
+    for (double& value : new_state) {
+        value += 0.1;
+    }
+
+    publish_joint_state(make_joint_state_msg(new_state));
+
+    /* During hold */
+    force_hold();
+    joint_commands_received_.clear();
+    spin_for(300ms);
+
+    ASSERT_EQ(motion_control_node_->get_state(), State::HOLDING);
+    expect_all_joint_commands_to_equal(
+        initial_state);  // TODO: something unexpected is happening here
+
+    /* Exited hold */
+    force_recalibrate();
+    joint_commands_received_.clear();
+    spin_for(300ms);
+
+    ASSERT_EQ(motion_control_node_->get_state(), State::NORMAL);
+    expect_all_joint_commands_to_equal(new_state);
 }
 
 TEST_F(MotionControlStateTest, HoldToNormalClearsOldCameraOrientationCommand) {
@@ -72,7 +98,9 @@ TEST_F(MotionControlStateTest, HoldToNormalClearsOldCameraOrientationCommand) {
 }
 
 TEST_F(MotionControlStateTest, CalibratingStateDoesNotPublish) {
-    GTEST_SKIP() << "[N/A] tested by `NoOutputWithoutJointState`";
+    /* By default, the node begins in calibrating state */
+    ASSERT_EQ(motion_control_node_->get_state(), State::CALIBRATING);
+    ASSERT_TRUE(joint_commands_received_.empty());
 }
 
 TEST_F(MotionControlStateTest, TerminalStateRepublishesOldCameraOrientationCommand) {

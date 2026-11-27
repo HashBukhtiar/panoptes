@@ -27,17 +27,22 @@ class MotionControlTest : public ::testing::Test {
 
     std::vector<JointCommand> joint_commands_received_;
 
-    /* Override normal configuration limits since tests use dummy inputs, not real data */
     static std::vector<std::string> default_param_args() {
         return {
-            "camera_command_max_age_ms:=1e15", /* Effectively disables staleness checks */
+            "camera_command_max_age_ms:=1e15", /* Disable staleness checks unless overriden */
             "joint_state_max_age_ms:=1e15",
-            "joint_min_rad:=[-3.0,-3.0,-3.0]", /* Wide limits so test messages are always valid */
-            "joint_max_rad:=[3.0,3.0,3.0]",
-            "camera_min_rad:=[-3.0,-3.0,-3.0]",
-            "camera_max_rad:=[3.0,3.0,3.0]",
-            "max_speed_rad_s:=1000.0", /* No ramping (camera commands become joint commands
-                                          directly, so outputs don't depend on tick timing) */
+
+            "joint_state_good_streak_min_ms:=1e15", /* Disable timing checks unless overriden */
+            "joint_state_fault_streak_max_ms:=1e15",
+            "hold_max_duration_ms:=1e15",
+            "joint_state_max_gap_ms:=1e15",
+
+            "joint_min_rad:=[-1e9,-1e9,-1e9]", /* Disable numerical checks unless overriden */
+            "joint_max_rad:=[1e9,1e9,1e9]",
+            "camera_min_rad:=[-1e9,-1e9,-1e9]",
+            "camera_max_rad:=[1e9,1e9,1e9]",
+
+            "max_speed_rad_s:=1000.0", /* Disable ramping unless overriden */
         };
     }
 

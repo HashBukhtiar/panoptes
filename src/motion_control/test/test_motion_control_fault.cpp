@@ -18,12 +18,20 @@ class MotionControlFaultTest : public MotionControlTest {
    protected:
     static void SetUpTestSuite() {
         auto params = default_param_args();
-        params.push_back("camera_command_max_age_ms:=5000.0");
+
+        params.push_back("camera_command_max_age_ms:=5000.0"); /* Enable staleness checks */
         params.push_back("joint_state_max_age_ms:=5000.0");
-        params.push_back("joint_state_max_gap_ms:=100.0");
-        params.push_back("joint_state_fault_streak_max_ms:=500.0");
+
+        params.push_back("joint_state_fault_streak_max_ms:=500.0"); /* Enable timing checks */
         params.push_back("joint_state_good_streak_min_ms:=500.0");
         params.push_back("hold_max_duration_ms:=2000.0");
+        params.push_back("joint_state_max_gap_ms:=100.0");
+
+        params.push_back("joint_min_rad:=[-3.0,-3.0,-3.0]"); /* Enable numerical checks */
+        params.push_back("joint_max_rad:=[3.0,3.0,3.0]");
+        params.push_back("camera_min_rad:=[-3.0,-3.0,-3.0]");
+        params.push_back("camera_max_rad:=[3.0,3.0,3.0]");
+
         init_ros(params);
     }
 
@@ -94,7 +102,7 @@ class MotionControlFaultTest : public MotionControlTest {
      * Republishes joint state until the first joint command arrives, then clears
      * joint_commands_received_ so later checks only see output from after seeding.
      *
-     * @return The positions that were published, which the initial_state joint command should now
+     * @return The positions that were published, which the seeded joint command should now
      * hold.
      */
     std::vector<double> seed_with_joint_state() {
@@ -179,14 +187,14 @@ TEST_F(MotionControlFaultTest, OutOfOrderCameraCommandIsDropped) {
         return cmd.header.stamp.sec == stamp.sec && cmd.header.stamp.nanosec == stamp.nanosec;
     };
 
-    /* younger command is accepted, so output carries its stamp */
+    /* Younger command is accepted, so output carries its stamp */
     ASSERT_TRUE(spin_until([&] {
         publish_camera_command(younger);
         return !joint_commands_received_.empty() &&
                has_stamp(joint_commands_received_.back(), younger.header.stamp);
     }));
 
-    /* older command is ignored, so output keeps the younger stamp */
+    /* Older command is ignored, so output keeps the younger stamp */
     joint_commands_received_.clear();
     publish_camera_command(older);
     spin_for(300ms);
