@@ -63,6 +63,7 @@ void MotionControlNode::hold() {
  */
 void MotionControlNode::recalibrate() {
     last_joint_command_.position = last_joint_state_;
+    last_target_joint_angles_.reset();
     alerter_.raise("[INFO] incoming messages now good, recalibrating");
     state_ = State::NORMAL;
     hold_start_time_.reset();
@@ -163,7 +164,13 @@ void MotionControlNode::on_camera_command(const CameraOrientationCommand::Shared
     kinematics::CameraOrientation orientation{msg->yaw, msg->pitch, msg->roll};
 
     if (!msg->is_absolute) {
-        auto base = kinematics::forward_kinematics(last_target_joint_angles_);
+        std::optional<kinematics::CameraOrientation> base;
+        if (last_target_joint_angles_) {
+            base = kinematics::forward_kinematics(*last_target_joint_angles_);
+        } else {
+            // TODO: if we recalibrated (i.e., lose last relative target), start from joint
+            // state...?
+        }
         if (!base) {
             // TODO: handle
             return;
@@ -245,8 +252,8 @@ void MotionControlNode::compute_and_send_joint_command() {
         return;
     }
 
-    if (state_ == State::NORMAL && !last_target_joint_angles_.empty()) {
-        trajectory::step_rate_limited(last_joint_command_.position, last_target_joint_angles_,
+    if (state_ == State::NORMAL && last_target_joint_angles_) {
+        trajectory::step_rate_limited(last_joint_command_.position, *last_target_joint_angles_,
                                       MAX_SPEED_RAD_S_, dt);
         last_joint_command_.header.stamp = *last_camera_command_stamp_;
     }
