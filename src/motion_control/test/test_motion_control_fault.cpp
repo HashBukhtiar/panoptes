@@ -97,23 +97,6 @@ class MotionControlFaultTest : public MotionControlTest {
     }
 
     /**
-     * Checks that every joint command received so far is at some expected position.
-     * Fails if nothing has been received or if any command differs in size or value.
-     *
-     * @param expected Positions every received joint command must match.
-     */
-    void expect_all_joint_commands_to_equal(const std::vector<double>& expected) {
-        ASSERT_FALSE(joint_commands_received_.empty());
-
-        for (const auto& cmd : joint_commands_received_) {
-            ASSERT_EQ(cmd.position.size(), expected.size());
-            for (size_t i = 0; i < expected.size(); ++i) {
-                EXPECT_DOUBLE_EQ(cmd.position[i], expected[i]);
-            }
-        }
-    }
-
-    /**
      * Publishes once, watches for a fixed window, and expects no joint command to arrive.
      *
      * @param publish Callable that publishes the messages under test.
@@ -192,7 +175,7 @@ TEST_F(MotionControlFaultTest, ValidCameraCommandButFailedKinematicsIsDroppedAnd
     const auto initial_state = seed_with_joint_state();
 
     stub_kinematics::ik_fails = true;
-    publish_camera_command(make_camera_command_msg());
+    publish_camera_command();
 
     spin_for_and_expect_alert(300ms);
     expect_all_joint_commands_to_equal(initial_state);
@@ -202,7 +185,7 @@ TEST_F(MotionControlFaultTest, ValidCameraCommandButInvalidKinematicsIsDroppedAn
     const auto initial_state = seed_with_joint_state();
 
     stub_kinematics::ik_out_of_range = true;
-    publish_camera_command(make_camera_command_msg());
+    publish_camera_command();
 
     spin_for_and_expect_alert(300ms);
     expect_all_joint_commands_to_equal(initial_state);

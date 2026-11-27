@@ -172,4 +172,21 @@ class MotionControlTest : public ::testing::Test {
         joint_commands_received_.clear();
         return msg.position;
     }
+
+    /**
+     * Checks that every joint command received so far is at some expected position.
+     * Fails if nothing has been received or if any command differs in size or value.
+     *
+     * @param expected Positions every received joint command must match.
+     */
+    void expect_all_joint_commands_to_equal(const std::vector<double>& expected) {
+        ASSERT_FALSE(joint_commands_received_.empty());
+
+        for (const auto& cmd : joint_commands_received_) {
+            ASSERT_EQ(cmd.position.size(), expected.size());
+            for (size_t i = 0; i < expected.size(); ++i) {
+                EXPECT_DOUBLE_EQ(cmd.position[i], expected[i]);
+            }
+        }
+    }
 };
