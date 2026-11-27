@@ -110,9 +110,8 @@ class MotionControlTest : public ::testing::Test {
         spin_until([] { return false; }, duration);
     }
 
-    virtual CameraOrientationCommand make_camera_command_msg(double yaw = 0.0, double pitch = 0.0,
-                                                             double roll = 0.0,
-                                                             bool is_absolute = true) {
+    CameraOrientationCommand make_camera_command_msg(double yaw = 0.0, double pitch = 0.0,
+                                                     double roll = 0.0, bool is_absolute = true) {
         CameraOrientationCommand msg;
         msg.header.stamp = peer_node_->now();
         msg.yaw = yaw;
@@ -122,7 +121,7 @@ class MotionControlTest : public ::testing::Test {
         return msg;
     }
 
-    virtual JointState make_joint_state_msg(const std::vector<double>& position = {2.0, 2.0, 2.0}) {
+    JointState make_joint_state_msg(const std::vector<double>& position = {2.0, 2.0, 2.0}) {
         JointState msg;
         msg.header.stamp = peer_node_->now();
         msg.position = position;
@@ -130,7 +129,7 @@ class MotionControlTest : public ::testing::Test {
     }
 
     void publish_camera_command() {
-        publish_camera_command(make_camera_command_msg()); /* default (valid) */
+        camera_pub_->publish(make_camera_command_msg()); /* default (valid) */
     }
 
     void publish_camera_command(const CameraOrientationCommand& msg) {
@@ -138,7 +137,7 @@ class MotionControlTest : public ::testing::Test {
     }
 
     void publish_joint_state() {
-        publish_joint_state(make_joint_state_msg()); /* default (valid) */
+        joint_state_pub_->publish(make_joint_state_msg()); /* default (valid) */
     }
 
     void publish_joint_state(const JointState& msg) {
@@ -155,5 +154,22 @@ class MotionControlTest : public ::testing::Test {
 
     void force_terminate() {
         motion_control_node_->terminate("forced by test");
+    }
+
+    /**
+     * Seeds the node with an initial valid joint state and waits for the first joint command to be
+     * published. Clears joint_commands_received_ so subsequent checks only see commands published
+     * after seeding.
+     *
+     * @return The initial joint positions, which the first joint command should match.
+     */
+    std::vector<double> seed_with_joint_state() {
+        const auto msg = make_joint_state_msg();
+        publish_joint_state(msg);
+
+        EXPECT_TRUE(spin_until([&] { return !joint_commands_received_.empty(); }));
+
+        joint_commands_received_.clear();
+        return msg.position;
     }
 };

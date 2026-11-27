@@ -2,54 +2,27 @@
 
 #include "motion_control_test.hpp"
 
-using namespace std::chrono_literals;
 using State = MotionControlNode::State;
 
 class MotionControlStateTest : public MotionControlTest {
    protected:
-    /* Time to spin after a state change, before draining joint_commands_received_, so commands the
-     * node published BEFORE the change but that are still in transit are delivered and discarded.
-     */
     static constexpr std::chrono::milliseconds DRAIN_WINDOW{30};
-
-    /* Time to spin and collect commands after draining joint_commands_received_, before asserting
-     * on them. Long enough to gather several commands. */
     static constexpr std::chrono::milliseconds OBSERVATION_WINDOW{50};
 
     /**
-     * Waits for the node to publish commands that reflect the current state, then collects them in
-     * joint_commands_received_. Call it right after an action (e.g., a state change) whose effect
-     * you want to check.
+     * Waits for the node to publish commands reflecting the new state after a state change.
      *
-     * Commands published before the action may still be in transit and would otherwise show up in
-     * the buffer. This discards them first (DRAIN_WINDOW), then collects fresh ones
-     * (OBSERVATION_WINDOW).
+     * Commands from the previous state may still be in flight after the state change. Therefore,
+     * this first drains and discards old commands (DRAIN_WINDOW), then collects fresh commands
+     * (OBSERVATION_WINDOW) in joint_commands_received_.
      *
-     * Contrast with spin_for(), which collects everything, including in-flight commands from before
-     * the action.
+     * Contrast with spin_for(), which collects all commands, including in-flight commands from
+     * before the state change.
      */
     void spin_for_fresh_commands() {
         spin_for(DRAIN_WINDOW);
         joint_commands_received_.clear();
         spin_for(OBSERVATION_WINDOW);
-    }
-
-    /**
-     * Seeds the node with a valid joint state and waits until it publishes.
-     *
-     * Republishes joint state until the first joint command arrives, then clears
-     * joint_commands_received_ so later checks only see output from after seeding.
-     *
-     * @return The positions that were published, which the seeded joint command should now hold.
-     */
-    std::vector<double> seed_with_joint_state() {
-        const auto msg = make_joint_state_msg();
-        EXPECT_TRUE(spin_until([&] {
-            joint_state_pub_->publish(make_joint_state_msg());
-            return !joint_commands_received_.empty();
-        }));
-        joint_commands_received_.clear();
-        return msg.position;  // TODO: might remove for this one? dk if needed?
     }
 
     /**
@@ -161,8 +134,4 @@ TEST_F(MotionControlStateTest, TerminalStateRepublishesOldCameraOrientationComma
 
     ASSERT_EQ(motion_control_node_->get_state(), State::TERMINAL);
     expect_all_joint_commands_to_equal(initial_state);
-}
-
-TEST_F(MotionControlStateTest, TerminalStateIsNotExitable) {
-    GTEST_SKIP() << "[TODO] not implemented yet";
 }

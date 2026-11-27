@@ -9,14 +9,12 @@ using namespace std::chrono_literals;
 class MotionControlPubSubTest : public MotionControlTest {};
 
 TEST_F(MotionControlPubSubTest, PublishesJointCommandWithOriginalTimestamp) {
-    const auto camera_command = make_camera_command_msg();
-    const auto joint_state = make_joint_state_msg();
+    seed_with_joint_state();
 
-    ASSERT_TRUE(spin_until([&] {
-        camera_pub_->publish(camera_command);
-        joint_state_pub_->publish(joint_state);
-        return !joint_commands_received_.empty();
-    }));
+    const auto camera_command = make_camera_command_msg();
+    publish_camera_command(camera_command);
+
+    ASSERT_TRUE(spin_until([&] { return !joint_commands_received_.empty(); }));
 
     const auto& joint_command = joint_commands_received_.front();
     EXPECT_EQ(joint_command.header.stamp.sec, camera_command.header.stamp.sec);
@@ -24,52 +22,47 @@ TEST_F(MotionControlPubSubTest, PublishesJointCommandWithOriginalTimestamp) {
 }
 
 TEST_F(MotionControlPubSubTest, SeedsStartPositionWithJointState) {
-    const auto camera_command = make_camera_command_msg();
     const auto joint_state = make_joint_state_msg();
+    publish_joint_state(joint_state);
 
-    ASSERT_TRUE(spin_until([&] {
-        camera_pub_->publish(camera_command);
-        joint_state_pub_->publish(joint_state);
-        return !joint_commands_received_.empty();
-    }));
+    ASSERT_TRUE(spin_until([&] { return !joint_commands_received_.empty(); }));
 
     const auto& joint_command = joint_commands_received_.front();
-    for (double val : joint_command.position) {
-        EXPECT_LE(val, 2.0); /* from make_joint_state_msg */
-        EXPECT_GE(val, 1.0); /* from stub_kinematics.cpp */
-    }
+    EXPECT_EQ(joint_command.position, joint_state.position);
 }
 
-TEST_F(MotionControlPubSubTest, NoOutputWithoutJointState) {
-    camera_pub_->publish(make_camera_command_msg());
-    spin_for(300ms);
+TEST_F(MotionControlPubSubTest, DoesNotPublishWithoutJointState) {
+    publish_camera_command();
+    spin_for(200ms);
+
     EXPECT_TRUE(joint_commands_received_.empty());
 }
 
-TEST_F(MotionControlPubSubTest, OutputEvenWithoutCameraOrientationCommand) {
-    joint_state_pub_->publish(make_joint_state_msg());
-    spin_for(300ms);
-    EXPECT_FALSE(joint_commands_received_.empty());
+TEST_F(MotionControlPubSubTest, PublishesEvenWithoutCameraOrientationCommand) {
+    publish_joint_state();
+
+    EXPECT_TRUE(spin_until([this] { return !joint_commands_received_.empty(); }));
 }
 
-TEST_F(MotionControlPubSubTest, RelativeCommandIsAppliedOnTopOfLastCommand) {
+TEST_F(MotionControlPubSubTest, AppliesRelativeCommandOnTopOfLastCommand) {
     const double x = 0.1, d = 0.05;
 
-    /* Send one command, wait for the loop to publish, then return the most recent joint command. */
-    auto send = [&](const CameraOrientationCommand& cmd) {
+    seed_with_joint_state();
+
+    auto publish_and_get_joint_command = [&](const CameraOrientationCommand& msg) {
         joint_commands_received_.clear();
-        camera_pub_->publish(cmd);
-        joint_state_pub_->publish(make_joint_state_msg());
+        publish_camera_command(msg);
 
-        spin_until([&] { return !joint_commands_received_.empty(); });
+        EXPECT_TRUE(spin_until([this] { return !joint_commands_received_.empty(); }));
 
-        EXPECT_FALSE(joint_commands_received_.empty());
-        return joint_commands_received_.empty() ? JointCommand{} : joint_commands_received_.back();
+        return joint_commands_received_.back();
     };
 
-    send(make_camera_command_msg(x, x, x, true));
-    const auto relative_out = send(make_camera_command_msg(d, d, d, false));
-    const auto absolute_out = send(make_camera_command_msg(x + d, x + d, x + d, true));
+    publish_and_get_joint_command(make_camera_command_msg(x, x, x, true));
+    const auto relative_out =
+        publish_and_get_joint_command(make_camera_command_msg(d, d, d, false));
+    const auto absolute_out =
+        publish_and_get_joint_command(make_camera_command_msg(x + d, x + d, x + d, true));
 
     ASSERT_EQ(relative_out.position.size(), absolute_out.position.size());
 

@@ -97,25 +97,6 @@ class MotionControlFaultTest : public MotionControlTest {
     }
 
     /**
-     * Seeds the node with a valid joint state and waits until it publishes.
-     *
-     * Republishes joint state until the first joint command arrives, then clears
-     * joint_commands_received_ so later checks only see output from after seeding.
-     *
-     * @return The positions that were published, which the seeded joint command should now
-     * hold.
-     */
-    std::vector<double> seed_with_joint_state() {
-        const auto msg = make_joint_state_msg();
-        EXPECT_TRUE(spin_until([&] {
-            publish_joint_state(msg);
-            return !joint_commands_received_.empty();
-        }));
-        joint_commands_received_.clear();
-        return msg.position;
-    }
-
-    /**
      * Checks that every joint command received so far is at some expected position.
      * Fails if nothing has been received or if any command differs in size or value.
      *
