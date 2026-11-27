@@ -110,6 +110,7 @@ class MotionControlTest : public ::testing::Test {
         spin_until([] { return false; }, duration);
     }
 
+    /** Creates a camera command with the (optional) given values and current timestamp. */
     CameraOrientationCommand make_camera_command_msg(double yaw = 0.0, double pitch = 0.0,
                                                      double roll = 0.0, bool is_absolute = true) {
         CameraOrientationCommand msg;
@@ -121,6 +122,7 @@ class MotionControlTest : public ::testing::Test {
         return msg;
     }
 
+    /** Creates a camera command with the (optional) given values and current timestamp. */
     JointState make_joint_state_msg(const std::vector<double>& position = {2.0, 2.0, 2.0}) {
         JointState msg;
         msg.header.stamp = peer_node_->now();
@@ -128,18 +130,22 @@ class MotionControlTest : public ::testing::Test {
         return msg;
     }
 
+    /** Publishes a default valid camera command. */
     void publish_camera_command() {
         camera_pub_->publish(make_camera_command_msg()); /* default (valid) */
     }
 
+    /** Publishes the given camera command. */
     void publish_camera_command(const CameraOrientationCommand& msg) {
         camera_pub_->publish(msg);
     }
 
+    /** Publishes a default valid joint state. */
     void publish_joint_state() {
         joint_state_pub_->publish(make_joint_state_msg()); /* default (valid) */
     }
 
+    /** Publishes the given joint state. */
     void publish_joint_state(const JointState& msg) {
         joint_state_pub_->publish(msg);
     }

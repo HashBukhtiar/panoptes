@@ -42,7 +42,7 @@ TEST_F(MotionControlStateTest, HoldStateRepublishesOldCameraOrientationCommand) 
     const auto initial_state = seed_with_joint_state();
 
     force_hold();
-    publish_camera_command(make_camera_command_msg());
+    publish_camera_command();
     spin_for(OBSERVATION_WINDOW);
 
     ASSERT_EQ(motion_control_node_->get_state(), State::HOLDING);
@@ -104,7 +104,7 @@ TEST_F(MotionControlStateTest, HoldToNormalClearsOldCameraOrientationCommand) {
 
 TEST_F(MotionControlStateTest, CalibratingStateDoesNotPublish) {
     /* By default, the node begins in calibrating state */
-    publish_camera_command(make_camera_command_msg());
+    publish_camera_command();
     spin_for(OBSERVATION_WINDOW);
 
     ASSERT_EQ(motion_control_node_->get_state(), State::CALIBRATING);
@@ -115,7 +115,7 @@ TEST_F(MotionControlStateTest, TerminalStateRepublishesOldCameraOrientationComma
     const auto initial_state = seed_with_joint_state();
 
     force_terminate();
-    publish_camera_command(make_camera_command_msg());
+    publish_camera_command();
     spin_for(OBSERVATION_WINDOW);
 
     ASSERT_EQ(motion_control_node_->get_state(), State::TERMINAL);
