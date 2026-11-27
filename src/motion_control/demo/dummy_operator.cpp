@@ -45,16 +45,19 @@ class DummyOperator : public rclcpp::Node {
         msg.roll = angle * 0.2;
 
         if (version_ == "invalid" && t >= 1.0 && t < 1.1) {
+            /* Publishes invalid commands from t=1 to t=1.1 */
             msg.yaw = std::numeric_limits<double>::quiet_NaN();
         } else if (version_ == "old") {
-            msg.header.stamp = now() - rclcpp::Duration::from_seconds(10);
+            /* Publishes stsale commands permanently */
+            msg.header.stamp = now() - rclcpp::Duration::from_seconds(1);
         }
 
         publisher_->publish(msg);
 
-        if (++log_counter_ >= 90) {
-            RCLCPP_INFO(get_logger(), "Published command: yaw=%.3f, pitch=%.3f, roll=%.3f", msg.yaw,
-                        msg.pitch, msg.roll);
+        if (++log_counter_ >= 30) {
+            RCLCPP_INFO(
+                get_logger(), "Published command: yaw=%.3f, pitch=%.3f, roll=%.3f, stamp=%u.%09u",
+                msg.yaw, msg.pitch, msg.roll, msg.header.stamp.sec, msg.header.stamp.nanosec);
             log_counter_ = 0;
         }
     }
