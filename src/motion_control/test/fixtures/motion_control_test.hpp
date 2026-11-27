@@ -93,6 +93,13 @@ class MotionControlTest : public ::testing::Test {
         }));
     }
 
+    /**
+     * Spins the executor until the condition is met or the timeout expires.
+     *
+     * @param condition Condition to wait for.
+     * @param timeout Maximum time to wait.
+     * @return Whether the condition was met before the timeout.
+     */
     bool spin_until(const std::function<bool()>& condition,
                     std::chrono::milliseconds timeout = std::chrono::seconds(2)) {
         const auto start = std::chrono::steady_clock::now();
@@ -106,6 +113,11 @@ class MotionControlTest : public ::testing::Test {
         return true;
     }
 
+    /**
+     * Spins the executor for the specified duration.
+     *
+     * @param duration How long to spin the executor.
+     */
     void spin_for(std::chrono::milliseconds duration) {
         spin_until([] { return false; }, duration);
     }
@@ -132,7 +144,7 @@ class MotionControlTest : public ::testing::Test {
 
     /** Publishes a default valid camera command. */
     void publish_camera_command() {
-        camera_pub_->publish(make_camera_command_msg()); /* default (valid) */
+        camera_pub_->publish(make_camera_command_msg());
     }
 
     /** Publishes the given camera command. */
@@ -142,7 +154,7 @@ class MotionControlTest : public ::testing::Test {
 
     /** Publishes a default valid joint state. */
     void publish_joint_state() {
-        joint_state_pub_->publish(make_joint_state_msg()); /* default (valid) */
+        joint_state_pub_->publish(make_joint_state_msg());
     }
 
     /** Publishes the given joint state. */
