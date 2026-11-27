@@ -92,33 +92,30 @@ TEST_F(MotionControlStateTest, HoldStateRepublishesOldCameraOrientationCommand) 
     expect_all_joint_commands_to_equal(initial_state);
 }
 
-// TEST_F(MotionControlStateTest, HoldToNormalReseedsJointState) {
-//     const auto initial_state = seed_with_joint_state();
+TEST_F(MotionControlStateTest, HoldToNormalReseedsJointState) {
+    const auto initial_state = seed_with_joint_state();
 
-//     std::vector<double> new_state = initial_state;
-//     for (double& value : new_state) {
-//         value += 0.1;
-//     }
+    std::vector<double> new_state = initial_state;
+    for (double& value : new_state) {
+        value += 0.1;
+    }
 
-//     publish_joint_state(make_joint_state_msg(new_state));
+    publish_joint_state(make_joint_state_msg(new_state));
 
-//     /* During hold */
-//     force_hold();
-//     joint_commands_received_.clear();
-//     spin_for(300ms);
+    /* During hold, the last commanded positions are maintained */
+    force_hold();
+    spin_for_fresh_commands();
 
-//     ASSERT_EQ(motion_control_node_->get_state(), State::HOLDING);
-//     expect_all_joint_commands_to_equal(
-//         initial_state);  // TODO: something unexpected is happening here
+    ASSERT_EQ(motion_control_node_->get_state(), State::HOLDING);
+    expect_all_joint_commands_to_equal(initial_state);
 
-//     /* Exited hold */
-//     force_recalibrate();
-//     joint_commands_received_.clear();
-//     spin_for(300ms);
+    /* After recalibration, joint command is reseeded to latest joint state */
+    force_recalibrate();
+    spin_for_fresh_commands();
 
-//     ASSERT_EQ(motion_control_node_->get_state(), State::NORMAL);
-//     expect_all_joint_commands_to_equal(new_state);
-// }
+    ASSERT_EQ(motion_control_node_->get_state(), State::NORMAL);
+    expect_all_joint_commands_to_equal(new_state);
+}
 
 TEST_F(MotionControlStateTest, HoldToNormalClearsOldCameraOrientationCommand) {
     const auto initial_state = seed_with_joint_state();
