@@ -30,7 +30,9 @@ def frames(source):
                 delay = next_due - time.monotonic()
                 if delay > 0:
                     time.sleep(delay)
-                next_due = max(next_due, time.monotonic()) + period
+                # From the planned time, not from when sleep woke up (it oversleeps ~2 ms, which would add up
+                # to 28 fps instead of 30); if more than a frame behind, carry on from now rather than rush.
+                next_due = max(next_due + period, time.monotonic())
             # A webcam needs no pacing: grab() waits for its next frame.
             if not cap.grab():
                 break

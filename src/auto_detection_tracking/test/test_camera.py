@@ -24,6 +24,9 @@ def test_video_file_yields_every_frame_paced_to_its_fps(tmp_path):
     gaps_s = np.diff([stamp for stamp, _ in out]) / 1e9
     assert (gaps_s > 0).all()
     assert abs(gaps_s.mean() - 1 / FPS) < 0.01
+    # No drift: oversleeping a little each frame mustn't add up over the clip. From the second frame,
+    # since the first doesn't sleep at all.
+    assert abs(gaps_s[1:].sum() - (N_FRAMES - 2) / FPS) < 0.005
 
 
 def test_missing_file_raises():
