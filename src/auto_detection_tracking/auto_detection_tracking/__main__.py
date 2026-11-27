@@ -14,18 +14,15 @@ from pathlib import Path
 import cv2
 import yaml
 
-from auto_detection_tracking import detector
+from auto_detection_tracking import detector, ui
 from auto_detection_tracking.camera import frames
 from auto_detection_tracking.log import frame_row, open_log
-from auto_detection_tracking.pointing import focal_px, orientation_command, readout
-from auto_detection_tracking.target import HOLDING, LOST, TRACKING, Tracker, centre
+from auto_detection_tracking.pointing import focal_px, orientation_command
+from auto_detection_tracking.target import Tracker
 from auto_detection_tracking.voice import Listener
 
 CONFIG = Path(__file__).resolve().parent.parent / "config" / "auto_detection_tracking.yaml"
 WINDOW = "Panoptes - camera active (q to quit)"
-GREEN, YELLOW, RED, GREY, WHITE = (0, 255, 0), (0, 255, 255), (0, 0, 255), (160, 160, 160), (255, 255, 255)
-STATE_COLOUR = {TRACKING: GREEN, HOLDING: YELLOW, LOST: RED}
-FONT = cv2.FONT_HERSHEY_SIMPLEX
 
 
 def window_open():
@@ -33,17 +30,6 @@ def window_open():
         return cv2.getWindowProperty(WINDOW, cv2.WND_PROP_VISIBLE) >= 1
     except cv2.error:  # macOS raises instead of returning 0 once the window is gone
         return False
-
-
-def text(image, s, org, colour, scale=0.8):
-    cv2.putText(image, s, org, FONT, scale, (0, 0, 0), 5)  # dark outline, readable on any background
-    cv2.putText(image, s, org, FONT, scale, colour, 2)
-
-
-def draw(image, detection, colour, thickness, label):
-    _label, _score, (x1, y1, x2, y2) = detection
-    cv2.rectangle(image, (x1, y1), (x2, y2), colour, thickness)
-    text(image, label, (x1, y1 - 6), colour, 0.6)
 
 
 def main():
@@ -92,8 +78,8 @@ def main():
                 detections = detect[active](image)
                 state, target = tracker.update(detections, stamp_ns)
                 angles = None
+                f = focal_px(params["hfov_deg"], image.shape[1])
                 if target:  # tracking, holding or lost: the command ADT-12 will publish
-                    f = focal_px(params["hfov_deg"], image.shape[1])
                     angles = orientation_command(target[2], image.shape, f)  # stamp: stamp_ns
                 latency_ms = (time.time_ns() - stamp_ns) / 1e6  # capture -> command ready
                 if log:
@@ -101,33 +87,15 @@ def main():
                                            command))
                 command = None  # logged on the first frame that uses it
 
-                for d in detections:
-                    if d is not target:  # detected but not the target (DI-8)
-                        draw(image, d, GREY, 1, f"{d[0]} {d[1]:.2f}")
-                if state == TRACKING:
-                    draw(image, target, GREEN, 3, f"TARGET {target[0]} {target[1]:.2f}")
-                elif state == HOLDING:
-                    draw(image, target, YELLOW, 3, f"TARGET {target[0]} (held)")
-                elif state == LOST:  # mark the last known position
-                    x, y = (int(v) for v in centre(target[2]))
-                    cv2.drawMarker(image, (x, y), RED, cv2.MARKER_TILTED_CROSS, 24, 3)
-                status = (f"Target: {tracker.label} ({classes.index(tracker.label) + 1}) - {state}"
-                          if tracker.label else f"Target: none (press 1-{len(classes)})")
-                text(image, status, (10, 30), STATE_COLOUR.get(state, YELLOW))
-                if angles:
-                    text(image, readout(state, *angles, params["centred_deg"]), (10, 65), STATE_COLOUR[state])
                 if prev_stamp_ns:  # smoothed so the number is readable
                     fps = 0.9 * fps + 0.1 * 1e9 / max(stamp_ns - prev_stamp_ns, 1)
                 prev_stamp_ns = stamp_ns
-                perf = f"{fps:.0f} fps  {latency_ms:.0f} ms"
-                (width, _), _ = cv2.getTextSize(perf, FONT, 0.8, 2)
-                text(image, perf, (image.shape[1] - width - 10, 30), WHITE)
-                if listener:  # the microphone indicator (ADT-14 will restyle it)
-                    mic = listener.warning or ("MIC MUTED (m)" if listener.muted else "MIC LISTENING (m to mute)")
-                    if heard and stamp_ns - heard[1] < 2e9:
-                        mic += f'   heard "{heard[0]}"'
-                    colour = RED if listener.warning else GREY if listener.muted else WHITE
-                    text(image, mic, (10, image.shape[0] - 15), colour, 0.7)
+                mic = None if not listener else {
+                    "muted": listener.muted, "warning": listener.warning,
+                    "heard": heard[0] if heard and stamp_ns - heard[1] < 2e9 else None}  # shown for 2 s
+                ui.render(image, groups=[(name, g["classes"]) for name, g in groups.items()],
+                          selected=tracker.label, state=state, target=target, detections=detections, angles=angles,
+                          f=f, centred_deg=params["centred_deg"], fps=fps, latency_ms=latency_ms, mic=mic)
 
                 cv2.imshow(WINDOW, image)
                 key = cv2.waitKey(1) & 0xFF

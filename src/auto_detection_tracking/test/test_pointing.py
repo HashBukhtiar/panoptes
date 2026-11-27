@@ -25,16 +25,16 @@ def test_left_is_positive_yaw_and_down_is_positive_pitch():
 
 def test_centred_means_within_5_degrees_of_both_axes_combined():  # DI-7
     assert readout(TRACKING, math.radians(3), math.radians(3), 5) == "CENTRED"  # 4.2 deg off
-    assert readout(TRACKING, math.radians(4), math.radians(4), 5) == "MOVE LEFT 4 deg DOWN 4 deg"  # 5.7 deg off
+    assert readout(TRACKING, math.radians(4), math.radians(4), 5) == "MOVE LEFT 4° · DOWN 4°"  # 5.7 deg off
 
 
 def test_move_names_only_the_axes_that_are_off():
-    assert readout(TRACKING, math.radians(-12), 0.0, 5) == "MOVE RIGHT 12 deg"
-    assert readout(HOLDING, math.radians(12), 0.0, 5) == "MOVE LEFT 12 deg (held)"
+    assert readout(TRACKING, math.radians(-12), 0.0, 5) == "MOVE RIGHT 12°"
+    assert readout(HOLDING, math.radians(12), 0.0, 5) == "MOVE LEFT 12° (held)"
 
 
 def test_lost_gives_direction_only():
-    assert readout(LOST, 0.0, math.radians(-25), 5) == "LOST - MOVE UP"
+    assert readout(LOST, 0.0, math.radians(-25), 5) == "LOST · MOVE UP"
     assert readout(LOST, 0.0, 0.0, 5) == "LOST"
 
 
