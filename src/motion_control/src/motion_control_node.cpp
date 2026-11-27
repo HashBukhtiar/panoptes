@@ -143,9 +143,8 @@ void MotionControlNode::update_state(LocalClockTime now) {
  * @param msg       The received CameraOrientationCommand message.
  */
 void MotionControlNode::on_camera_command(const CameraOrientationCommand::SharedPtr msg) {
-    if (!msg || !validation::valid_camera_orientation(msg->yaw, msg->pitch, msg->roll,
-                                                      CAMERA_MIN_RAD_, CAMERA_MAX_RAD_)) {
-        alerter_.raise("[WARN] received null/invalid camera command, dropping this message");
+    if (!msg) {
+        alerter_.raise("[WARN] received null camera command, dropping this message");
         return;
     }
 
@@ -168,8 +167,7 @@ void MotionControlNode::on_camera_command(const CameraOrientationCommand::Shared
         if (last_target_joint_angles_) {
             base = kinematics::forward_kinematics(*last_target_joint_angles_);
         } else {
-            // TODO: if we recalibrated (i.e., lose last relative target), start from joint
-            // state...?
+            // TODO: recalibration loses last relative target, maybe use joint state as base?
         }
         if (!base) {
             // TODO: handle
@@ -182,7 +180,7 @@ void MotionControlNode::on_camera_command(const CameraOrientationCommand::Shared
 
     if (!validation::valid_camera_orientation(orientation.yaw, orientation.pitch, orientation.roll,
                                               CAMERA_MIN_RAD_, CAMERA_MAX_RAD_)) {
-        // TODO: handle
+        alerter_.raise("[WARN] received invalid camera command, dropping this message");
         return;
     }
 
