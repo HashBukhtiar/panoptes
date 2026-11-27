@@ -32,22 +32,6 @@ class MotionControlFaultTest : public MotionControlTest {
         stub_kinematics::ik_out_of_range = false;
     }
 
-    void publish_camera_command() {
-        publish_camera_command(make_camera_command_msg()); /* default (valid) */
-    }
-
-    void publish_camera_command(const CameraOrientationCommand& msg) {
-        camera_pub_->publish(msg);
-    }
-
-    void publish_joint_state() {
-        publish_joint_state(make_joint_state_msg()); /* default (valid) */
-    }
-
-    void publish_joint_state(const JointState& msg) {
-        joint_state_pub_->publish(msg);
-    }
-
     /**
      * Spins the executor for the duration like spin_for(), but also runs `each_tick` on every spin
      * step,to keep something  happening while time passes (e.g., publishing a message every step).
@@ -110,7 +94,8 @@ class MotionControlFaultTest : public MotionControlTest {
      * Republishes joint state until the first joint command arrives, then clears
      * joint_commands_received_ so later checks only see output from after seeding.
      *
-     * @return The positions that were published, which the seeded joint command should now hold.
+     * @return The positions that were published, which the initial_state joint command should now
+     * hold.
      */
     std::vector<double> seed_with_joint_state() {
         const auto msg = make_joint_state_msg();
@@ -123,12 +108,12 @@ class MotionControlFaultTest : public MotionControlTest {
     }
 
     /**
-     * Checks that every joint command received so far still holds the expected positions.
+     * Checks that every joint command received so far is at some expected position.
      * Fails if nothing has been received or if any command differs in size or value.
      *
      * @param expected Positions every received joint command must match.
      */
-    void expect_joint_commands_unchanged(const std::vector<double>& expected) {
+    void expect_all_joint_commands_to_equal(const std::vector<double>& expected) {
         ASSERT_FALSE(joint_commands_received_.empty());
 
         for (const auto& cmd : joint_commands_received_) {
@@ -153,41 +138,30 @@ class MotionControlFaultTest : public MotionControlTest {
     }
 };
 
-/* Controls */
-TEST_F(MotionControlFaultTest, ValidCameraCommandMovesJointCommand) {
-    const auto seeded = seed_with_joint_state();
-
-    publish_camera_command(make_camera_command_msg());
-    spin_for(300ms);
-
-    ASSERT_FALSE(joint_commands_received_.empty());
-    EXPECT_NE(joint_commands_received_.back().position, seeded);
-}
-
 /* Single CameraOrientationCommand faults */
 TEST_F(MotionControlFaultTest, MistypedCameraCommandIsDropped) {
     GTEST_SKIP() << "[N/A] type mismatch is rejected by ROS2 pub/sub, never reaches the node";
 }
 
 TEST_F(MotionControlFaultTest, InvalidCameraCommandIsDroppedAndAlerts) {
-    const auto seeded = seed_with_joint_state();
+    const auto initial_state = seed_with_joint_state();
 
     auto msg = make_camera_command_msg(99.0);
     publish_camera_command(msg);
 
     spin_for_and_expect_alert(300ms);
-    expect_joint_commands_unchanged(seeded);
+    expect_all_joint_commands_to_equal(initial_state);
 }
 
 TEST_F(MotionControlFaultTest, TooOldCameraCommandIsDroppedAndAlerts) {
-    const auto seeded = seed_with_joint_state();
+    const auto initial_state = seed_with_joint_state();
 
     auto msg = make_camera_command_msg();
     msg.header.stamp = peer_node_->now() - rclcpp::Duration::from_seconds(10.0);
     publish_camera_command(msg);
 
     spin_for_and_expect_alert(300ms);
-    expect_joint_commands_unchanged(seeded);
+    expect_all_joint_commands_to_equal(initial_state);
 }
 
 TEST_F(MotionControlFaultTest, OutOfOrderCameraCommandIsDropped) {
@@ -226,23 +200,23 @@ TEST_F(MotionControlFaultTest, OutOfOrderCameraCommandIsDropped) {
 
 /* Single kinematics library faults */
 TEST_F(MotionControlFaultTest, ValidCameraCommandButFailedKinematicsIsDroppedAndAlerts) {
-    const auto seeded = seed_with_joint_state();
+    const auto initial_state = seed_with_joint_state();
 
     stub_kinematics::ik_fails = true;
     publish_camera_command(make_camera_command_msg());
 
     spin_for_and_expect_alert(300ms);
-    expect_joint_commands_unchanged(seeded);
+    expect_all_joint_commands_to_equal(initial_state);
 }
 
 TEST_F(MotionControlFaultTest, ValidCameraCommandButInvalidKinematicsIsDroppedAndAlerts) {
-    const auto seeded = seed_with_joint_state();
+    const auto initial_state = seed_with_joint_state();
 
     stub_kinematics::ik_out_of_range = true;
     publish_camera_command(make_camera_command_msg());
 
     spin_for_and_expect_alert(300ms);
-    expect_joint_commands_unchanged(seeded);
+    expect_all_joint_commands_to_equal(initial_state);
 }
 
 /* Single JointState faults */

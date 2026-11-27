@@ -25,7 +25,11 @@ using LocalClockTime = std::chrono::steady_clock::time_point;
  *   _time_  = local steady-clock timestamp from this node (used for elapsed-time calculations)
  */
 
+class MotionControlTest; /* forward declaration for test-only */
+
 class MotionControlNode : public rclcpp::Node {
+    friend class MotionControlTest;
+
    public:
     MotionControlNode();
 

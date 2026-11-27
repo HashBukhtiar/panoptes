@@ -123,4 +123,32 @@ class MotionControlTest : public ::testing::Test {
         msg.position = position;
         return msg;
     }
+
+    void publish_camera_command() {
+        publish_camera_command(make_camera_command_msg()); /* default (valid) */
+    }
+
+    void publish_camera_command(const CameraOrientationCommand& msg) {
+        camera_pub_->publish(msg);
+    }
+
+    void publish_joint_state() {
+        publish_joint_state(make_joint_state_msg()); /* default (valid) */
+    }
+
+    void publish_joint_state(const JointState& msg) {
+        joint_state_pub_->publish(msg);
+    }
+
+    void force_hold() {
+        motion_control_node_->hold();
+    }
+
+    void force_recalibrate() {
+        motion_control_node_->recalibrate();
+    }
+
+    void force_terminal() {
+        motion_control_node_->terminate("forced by test");
+    }
 };
