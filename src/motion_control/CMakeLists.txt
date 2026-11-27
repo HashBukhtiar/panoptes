@@ -52,6 +52,7 @@ if(BUILD_DEMO)
     target_link_libraries(dummy_actuator PRIVATE
         rclcpp::rclcpp
         ${interfaces_TARGETS}
+        sensor_msgs::sensor_msgs
     )
 
     install(TARGETS
