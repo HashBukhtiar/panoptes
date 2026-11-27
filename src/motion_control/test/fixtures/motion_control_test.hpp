@@ -153,7 +153,7 @@ class MotionControlTest : public ::testing::Test {
         motion_control_node_->recalibrate();
     }
 
-    void force_terminal() {
+    void force_terminate() {
         motion_control_node_->terminate("forced by test");
     }
 };

@@ -146,12 +146,21 @@ TEST_F(MotionControlStateTest, HoldToNormalClearsOldCameraOrientationCommand) {
 
 TEST_F(MotionControlStateTest, CalibratingStateDoesNotPublish) {
     /* By default, the node begins in calibrating state */
+    publish_camera_command(make_camera_command_msg());
+
     ASSERT_EQ(motion_control_node_->get_state(), State::CALIBRATING);
     ASSERT_TRUE(joint_commands_received_.empty());
 }
 
 TEST_F(MotionControlStateTest, TerminalStateRepublishesOldCameraOrientationCommand) {
-    GTEST_SKIP() << "[TODO] not implemented yet";
+    const auto initial_state = seed_with_joint_state();
+
+    force_terminate();
+    publish_camera_command(make_camera_command_msg());
+    spin_for(OBSERVATION_WINDOW);
+
+    ASSERT_EQ(motion_control_node_->get_state(), State::TERMINAL);
+    expect_all_joint_commands_to_equal(initial_state);
 }
 
 TEST_F(MotionControlStateTest, TerminalStateIsNotExitable) {
