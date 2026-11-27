@@ -53,7 +53,10 @@ TEST_F(MotionControlPubSubTest, AppliesRelativeCommandOnTopOfLastCommand) {
         joint_commands_received_.clear();
         publish_camera_command(msg);
 
-        EXPECT_TRUE(spin_until([this] { return !joint_commands_received_.empty(); }));
+        EXPECT_TRUE(spin_until([&] {
+            return !joint_commands_received_.empty() &&
+                   joint_commands_received_.back().header.stamp == msg.header.stamp;
+        }));
 
         return joint_commands_received_.back();
     };

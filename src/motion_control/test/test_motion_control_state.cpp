@@ -105,6 +105,7 @@ TEST_F(MotionControlStateTest, HoldToNormalClearsOldCameraOrientationCommand) {
 TEST_F(MotionControlStateTest, CalibratingStateDoesNotPublish) {
     /* By default, the node begins in calibrating state */
     publish_camera_command(make_camera_command_msg());
+    spin_for(OBSERVATION_WINDOW);
 
     ASSERT_EQ(motion_control_node_->get_state(), State::CALIBRATING);
     ASSERT_TRUE(joint_commands_received_.empty());
