@@ -23,22 +23,26 @@ Your prompt shows `(.venv)` once the environment is active. `ModuleNotFoundError
 
 Pick the source in `config/auto_detection_tracking.yaml`: a webcam index (`"0"`) or a path to a video file. To try a different source without editing the file, pass `--source`, e.g. `python -m auto_detection_tracking --source path/to/clip.mov`. Relative paths are resolved from the folder you run in. Video files play at their own frame rate. The same file sets the models, which labels each one boxes (`classes`), and the minimum score.
 
-Press `1` to `6` to make a class the target (in the order listed under `detectors`: fork, spoon, knife, syringe, adson_forceps, needle_driver), and `0` to clear it. Only the model that owns the selected target runs, which keeps the video at 30 fps; picking a target from the other group switches models. The target gets a thick green box; other detected objects get thin grey boxes and are ignored (DI-8). The status line shows the tracking state:
+Press `1` to `6` to make a class the target (in the order listed under `detectors`: fork, spoon, knife, syringe, adson_forceps, needle_driver), and `0` to clear it. Only the model that owns the selected target runs, which keeps the video at 30 fps; picking a target from the other group switches models.
 
-- **searching**: not yet seen with a score of at least `acquire_score` since you selected it. Requiring a confident box to start keeps weak look-alikes from being picked up (DI-8).
-- **tracking** (green box): detected this frame. Once found, the target follows the box nearest its last position, so a higher-scoring look-alike elsewhere doesn't steal it.
-- **holding** (yellow box): missed for less than `lost_after_s`; the last box is kept.
-- **lost** (red cross at the last known position): missed for longer. The next detection of the class scoring at least `acquire_score`, anywhere, reacquires it.
+The window is the autonomous-mode operator view (ADT-14). Top left, a card shows the selected target and its tracking state; below it, every target with its key, the selected one highlighted. Top right, CAMERA ON with the frame rate and latency. In the centre, a crosshair with a ring `centred_deg` (5°, DI-7) from the centre, which turns green once the target is inside it. The target gets corner brackets and a name tag in its state's colour, plus an arrow from the centre showing which way the camera should turn; other detected objects get thin grey boxes and are ignored (DI-8). The states:
 
-Under the status, a second line stands in for the camera command until there's a mechanism to move (ADT-8): `MOVE LEFT 12 deg DOWN 4 deg`, `CENTRED` within `centred_deg` (5°, DI-7), or `LOST - MOVE UP` from the last known position. Directions are from the camera's point of view, so facing your webcam, "LEFT" is your right. The degrees come from `hfov_deg`, the camera's horizontal field of view, set for Hashim's MacBook webcam. For another camera, hold a ruler level at distance D from it, read the width W visible across the frame, and set `hfov_deg` to 2·atan(W / 2D) in degrees. Keep macOS Center Stage off (Control Center > Video Effects): it crops and pans the image, so the angles would be wrong.
+- **searching** (grey): not yet seen with a score of at least `acquire_score` since you selected it. Requiring a confident box to start keeps weak look-alikes from being picked up (DI-8).
+- **tracking** (green): detected this frame. Once found, the target follows the box nearest its last position, so a higher-scoring look-alike elsewhere doesn't steal it.
+- **holding** (amber): missed for less than `lost_after_s`; the last box is kept.
+- **lost** (red X at the last known position): missed for longer. The next detection of the class scoring at least `acquire_score`, anywhere, reacquires it.
+
+The bottom bar's large text stands in for the camera command until there's a mechanism to move (ADT-8): `MOVE LEFT 12° · DOWN 4°`, `CENTRED`, or `LOST · MOVE UP` from the last known position. Directions are from the camera's point of view, so facing your webcam, "LEFT" is your right. The degrees come from `hfov_deg`, the camera's horizontal field of view, set for Hashim's MacBook webcam. For another camera, hold a ruler level at distance D from it, read the width W visible across the frame, and set `hfov_deg` to 2·atan(W / 2D) in degrees. Keep macOS Center Stage off (Control Center > Video Effects): it crops and pans the image, so the angles would be wrong.
 
 Quit with `q`, `Esc`, or by closing the window. The window is the camera-active indicator (DI-22): the camera is open only while the window is showing, and nothing is recorded.
+
+The view uses the macOS system font, or DejaVu Sans on Linux if installed, else Pillow's built-in font. Its layout is sized for 1280x720 frames. DI-9's ring isn't drawn yet: whether "central 15°" means 15° from the centre or 15° across is still open.
 
 On macOS, the first webcam run asks for camera permission for your terminal app and exits with "Could not open camera source" while the prompt is up. Allow it, then run again. If no prompt appears, turn your terminal app on under System Settings > Privacy & Security > Camera and restart the terminal. If index 0 opens the wrong camera (e.g. an iPhone through Continuity Camera), try `"1"`.
 
 ## Voice (AI-1)
 
-Say **"track fork"**, **"track spoon"**, **"track knife"**, **"track syringe"**, **"track forceps"** or **"track needle driver"** to select a target, and **"stop tracking"** to clear it. Pause briefly before and after: only speech that is exactly one command counts, so a sentence like "now we'll track the forceps" is ignored. Press `m` to mute or unmute. The bottom line of the window shows MIC LISTENING or MIC MUTED, and the last command heard.
+Say **"track fork"**, **"track spoon"**, **"track knife"**, **"track syringe"**, **"track forceps"** or **"track needle driver"** to select a target, and **"stop tracking"** to clear it. Pause briefly before and after: only speech that is exactly one command counts, so a sentence like "now we'll track the forceps" is ignored. Press `m` to mute or unmute. The bottom bar shows MIC LISTENING or MIC MUTED, and the last command heard.
 
 Recognition runs offline on the laptop with [Vosk](https://alphacephei.com/vosk/) and is limited to these phrases. Audio is handled in memory 0.1 s at a time, never saved and never sent anywhere (DI-22). A command takes effect about 0.8 s after you stop speaking (the recognizer waits for a pause), which counts toward DI-7's 3 s. The words to say are the `spoken` lists in the config.
 
@@ -69,7 +73,7 @@ Both files live in `src/auto_detection_tracking/` and are gitignored (`*.pt`). T
 python -m auto_detection_tracking --log logs/run1.csv
 ```
 
-Writes one CSV row per frame: capture time (`stamp_ns`), capture-to-command latency (`latency_ms`), the selected class and tracking `state`, the target's label, score and box, the angle offset (`yaw_deg`, `pitch_deg`, `off_centre_deg`), and every detection as JSON. The first frame after a selection command also records the `command` (e.g. `key 5` or `voice: track forceps`) and `command_ns`, when it was given: the key press, or the end of speech. The time from `command_ns` to the first `tracking` row is the acquisition time (DI-7). It's for measuring DI-7, DI-8 and DI-9 in ADT-10. Only metadata is logged, never images (DI-22). `logs/` is gitignored. The top-right of the window shows FPS and the same latency.
+Writes one CSV row per frame: capture time (`stamp_ns`), capture-to-command latency (`latency_ms`), the selected class and tracking `state`, the target's label, score and box, the angle offset (`yaw_deg`, `pitch_deg`, `off_centre_deg`), and every detection as JSON. The first frame after a selection command also records the `command` (e.g. `key 5` or `voice: track forceps`) and `command_ns`, when it was given: the key press, or the end of speech. The time from `command_ns` to the first `tracking` row is the acquisition time (DI-7). It's for measuring DI-7, DI-8 and DI-9 in ADT-10. Only metadata is logged, never images (DI-22). `logs/` is gitignored. The top right of the window shows the frame rate and the same latency.
 
 ## Score a model on clips (ADT-5)
 

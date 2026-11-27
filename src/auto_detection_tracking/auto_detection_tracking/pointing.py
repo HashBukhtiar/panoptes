@@ -36,9 +36,9 @@ def readout(state, yaw, pitch, centred_deg):
             ("DOWN" if pitch > 0 else "UP", math.degrees(abs(pitch)))]
     if state == LOST:  # the box is the last known position: only its direction means anything
         words = [word for word, deg in axes if deg > centred_deg]
-        return " ".join(["LOST - MOVE", *words]) if words else "LOST"
+        return "LOST \u00b7 MOVE " + " ".join(words) if words else "LOST"
     if math.degrees(off_centre(yaw, pitch)) <= centred_deg:  # DI-7
         text = "CENTRED"
-    else:  # OpenCV's built-in fonts have no degree sign, hence "deg"
-        text = "MOVE " + " ".join(f"{word} {deg:.0f} deg" for word, deg in axes if round(deg) >= 1)
+    else:
+        text = "MOVE " + " \u00b7 ".join(f"{word} {deg:.0f}\u00b0" for word, deg in axes if round(deg) >= 1)
     return text + (" (held)" if state == HOLDING else "")
