@@ -87,6 +87,26 @@ if(BUILD_TESTING)
         ${sensor_msgs_TARGETS}
         ${interfaces_TARGETS}
     )
+
+    # test_motion_control_state
+    get_target_property(KINEMATICS_INCLUDE_DIRS kinematics::kinematics
+        INTERFACE_INCLUDE_DIRECTORIES)
+
+    ament_add_gtest(test_motion_control_state
+        test/test_motion_control_state.cpp
+        test/stubs/stub_kinematics.cpp
+        src/motion_control_node.cpp
+    )
+    target_include_directories(test_motion_control_state PRIVATE
+        include
+        ${KINEMATICS_INCLUDE_DIRS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/fixtures
+    )
+    target_link_libraries(test_motion_control_state
+        rclcpp::rclcpp
+        ${sensor_msgs_TARGETS}
+        ${interfaces_TARGETS}
+    )
 endif()
 
 ament_package()

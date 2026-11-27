@@ -63,6 +63,7 @@ void MotionControlNode::hold() {
  */
 void MotionControlNode::recalibrate() {
     last_joint_command_.position = last_joint_state_;
+    last_target_joint_angles_.reset();
     alerter_.raise("[INFO] incoming messages now good, recalibrating");
     state_ = State::NORMAL;
     hold_start_time_.reset();
@@ -142,9 +143,8 @@ void MotionControlNode::update_state(LocalClockTime now) {
  * @param msg       The received CameraOrientationCommand message.
  */
 void MotionControlNode::on_camera_command(const CameraOrientationCommand::SharedPtr msg) {
-    if (!msg || !validation::valid_camera_orientation(msg->yaw, msg->pitch, msg->roll,
-                                                      CAMERA_MIN_RAD_, CAMERA_MAX_RAD_)) {
-        alerter_.raise("[WARN] received null/invalid camera command, dropping this message");
+    if (!msg) {
+        alerter_.raise("[WARN] received null camera command, dropping this message");
         return;
     }
 
@@ -163,7 +163,12 @@ void MotionControlNode::on_camera_command(const CameraOrientationCommand::Shared
     kinematics::CameraOrientation orientation{msg->yaw, msg->pitch, msg->roll};
 
     if (!msg->is_absolute) {
-        auto base = kinematics::forward_kinematics(last_target_joint_angles_);
+        std::optional<kinematics::CameraOrientation> base;
+        if (last_target_joint_angles_) {
+            base = kinematics::forward_kinematics(*last_target_joint_angles_);
+        } else {
+            // TODO: recalibration loses last relative target, maybe use joint state as base?
+        }
         if (!base) {
             // TODO: handle
             return;
@@ -175,7 +180,7 @@ void MotionControlNode::on_camera_command(const CameraOrientationCommand::Shared
 
     if (!validation::valid_camera_orientation(orientation.yaw, orientation.pitch, orientation.roll,
                                               CAMERA_MIN_RAD_, CAMERA_MAX_RAD_)) {
-        // TODO: handle
+        alerter_.raise("[WARN] received invalid camera command, dropping this message");
         return;
     }
 
@@ -245,8 +250,8 @@ void MotionControlNode::compute_and_send_joint_command() {
         return;
     }
 
-    if (state_ == State::NORMAL && !last_target_joint_angles_.empty()) {
-        trajectory::step_rate_limited(last_joint_command_.position, last_target_joint_angles_,
+    if (state_ == State::NORMAL && last_target_joint_angles_) {
+        trajectory::step_rate_limited(last_joint_command_.position, *last_target_joint_angles_,
                                       MAX_SPEED_RAD_S_, dt);
         last_joint_command_.header.stamp = *last_camera_command_stamp_;
     }

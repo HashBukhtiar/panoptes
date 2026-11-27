@@ -27,17 +27,22 @@ class MotionControlTest : public ::testing::Test {
 
     std::vector<JointCommand> joint_commands_received_;
 
-    /* Override normal configuration limits since tests use dummy inputs, not real data */
     static std::vector<std::string> default_param_args() {
         return {
-            "camera_command_max_age_ms:=1e15", /* Effectively disables staleness checks */
+            "camera_command_max_age_ms:=1e15", /* Disable staleness checks unless overriden */
             "joint_state_max_age_ms:=1e15",
-            "joint_min_rad:=[-3.0,-3.0,-3.0]", /* Wide limits so test messages are always valid */
-            "joint_max_rad:=[3.0,3.0,3.0]",
-            "camera_min_rad:=[-3.0,-3.0,-3.0]",
-            "camera_max_rad:=[3.0,3.0,3.0]",
-            "max_speed_rad_s:=1000.0", /* No ramping (camera commands become joint commands
-                                          directly, so outputs don't depend on tick timing) */
+
+            "joint_state_good_streak_min_ms:=1e15", /* Disable timing checks unless overriden */
+            "joint_state_fault_streak_max_ms:=1e15",
+            "hold_max_duration_ms:=1e15",
+            "joint_state_max_gap_ms:=1e15",
+
+            "joint_min_rad:=[-1e9,-1e9,-1e9]", /* Disable numerical checks unless overriden */
+            "joint_max_rad:=[1e9,1e9,1e9]",
+            "camera_min_rad:=[-1e9,-1e9,-1e9]",
+            "camera_max_rad:=[1e9,1e9,1e9]",
+
+            "max_speed_rad_s:=1000.0", /* Disable ramping unless overriden */
         };
     }
 
@@ -88,6 +93,13 @@ class MotionControlTest : public ::testing::Test {
         }));
     }
 
+    /**
+     * Spins the executor until the condition is met or the timeout expires.
+     *
+     * @param condition Condition to wait for.
+     * @param timeout Maximum time to wait.
+     * @return Whether the condition was met before the timeout.
+     */
     bool spin_until(const std::function<bool()>& condition,
                     std::chrono::milliseconds timeout = std::chrono::seconds(2)) {
         const auto start = std::chrono::steady_clock::now();
@@ -101,13 +113,18 @@ class MotionControlTest : public ::testing::Test {
         return true;
     }
 
+    /**
+     * Spins the executor for the specified duration.
+     *
+     * @param duration How long to spin the executor.
+     */
     void spin_for(std::chrono::milliseconds duration) {
         spin_until([] { return false; }, duration);
     }
 
-    virtual CameraOrientationCommand make_camera_command_msg(double yaw = 0.0, double pitch = 0.0,
-                                                             double roll = 0.0,
-                                                             bool is_absolute = true) {
+    /** Creates a camera command with the (optional) given values and current timestamp. */
+    CameraOrientationCommand make_camera_command_msg(double yaw = 0.0, double pitch = 0.0,
+                                                     double roll = 0.0, bool is_absolute = true) {
         CameraOrientationCommand msg;
         msg.header.stamp = peer_node_->now();
         msg.yaw = yaw;
@@ -117,10 +134,77 @@ class MotionControlTest : public ::testing::Test {
         return msg;
     }
 
-    virtual JointState make_joint_state_msg(const std::vector<double>& position = {2.0, 2.0, 2.0}) {
+    /** Creates a camera command with the (optional) given values and current timestamp. */
+    JointState make_joint_state_msg(const std::vector<double>& position = {2.0, 2.0, 2.0}) {
         JointState msg;
         msg.header.stamp = peer_node_->now();
         msg.position = position;
         return msg;
+    }
+
+    /** Publishes a default valid camera command. */
+    void publish_camera_command() {
+        camera_pub_->publish(make_camera_command_msg());
+    }
+
+    /** Publishes the given camera command. */
+    void publish_camera_command(const CameraOrientationCommand& msg) {
+        camera_pub_->publish(msg);
+    }
+
+    /** Publishes a default valid joint state. */
+    void publish_joint_state() {
+        joint_state_pub_->publish(make_joint_state_msg());
+    }
+
+    /** Publishes the given joint state. */
+    void publish_joint_state(const JointState& msg) {
+        joint_state_pub_->publish(msg);
+    }
+
+    void force_hold() {
+        motion_control_node_->hold();
+    }
+
+    void force_recalibrate() {
+        motion_control_node_->recalibrate();
+    }
+
+    void force_terminate() {
+        motion_control_node_->terminate("forced by test");
+    }
+
+    /**
+     * Seeds the node with an initial valid joint state and waits for the first joint command to be
+     * published. Clears joint_commands_received_ so subsequent checks only see commands published
+     * after seeding.
+     *
+     * @return The initial joint positions, which the first joint command should match.
+     */
+    std::vector<double> seed_with_joint_state() {
+        const auto msg = make_joint_state_msg();
+        publish_joint_state(msg);
+
+        EXPECT_TRUE(spin_until([&] { return !joint_commands_received_.empty(); }));
+
+        joint_commands_received_.clear();
+        return msg.position;
+    }
+
+    /**
+     * Checks that every joint command received so far is at some expected position.
+     * Fails if nothing has been received or if any command differs in size or value.
+     *
+     * @param expected Positions every received joint command must match.
+     */
+    void expect_all_joint_commands_to_equal(const std::vector<double>& expected) {
+        ASSERT_FALSE(joint_commands_received_.empty());
+
+        for (const auto& cmd : joint_commands_received_) {
+            ASSERT_EQ(cmd.position.size(), expected.size());
+            for (size_t i = 0; i < expected.size(); ++i) {
+                EXPECT_DOUBLE_EQ(cmd.position[i], expected[i]);
+            }
+        }
     }
 };

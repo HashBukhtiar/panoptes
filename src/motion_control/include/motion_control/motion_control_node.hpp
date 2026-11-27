@@ -25,7 +25,11 @@ using LocalClockTime = std::chrono::steady_clock::time_point;
  *   _time_  = local steady-clock timestamp from this node (used for elapsed-time calculations)
  */
 
+class MotionControlTest; /* forward declaration for test-only */
+
 class MotionControlNode : public rclcpp::Node {
+    friend class MotionControlTest;
+
    public:
     MotionControlNode();
 
@@ -77,7 +81,8 @@ class MotionControlNode : public rclcpp::Node {
     Alerter alerter_{get_logger()};
 
     /* Received data */
-    kinematics::JointAngles last_target_joint_angles_; /* computed from last camera command */
+    std::optional<kinematics::JointAngles>
+        last_target_joint_angles_; /* computed from last camera command */
     std::optional<RosClockTime> last_camera_command_stamp_;
 
     std::vector<double> last_joint_state_;

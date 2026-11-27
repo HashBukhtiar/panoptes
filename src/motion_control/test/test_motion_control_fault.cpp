@@ -18,34 +18,26 @@ class MotionControlFaultTest : public MotionControlTest {
    protected:
     static void SetUpTestSuite() {
         auto params = default_param_args();
-        params.push_back("camera_command_max_age_ms:=5000.0");
+
+        params.push_back("camera_command_max_age_ms:=5000.0"); /* Enable staleness checks */
         params.push_back("joint_state_max_age_ms:=5000.0");
-        params.push_back("joint_state_max_gap_ms:=100.0");
-        params.push_back("joint_state_fault_streak_max_ms:=500.0");
+
+        params.push_back("joint_state_fault_streak_max_ms:=500.0"); /* Enable timing checks */
         params.push_back("joint_state_good_streak_min_ms:=500.0");
         params.push_back("hold_max_duration_ms:=2000.0");
+        params.push_back("joint_state_max_gap_ms:=100.0");
+
+        params.push_back("joint_min_rad:=[-3.0,-3.0,-3.0]"); /* Enable numerical checks */
+        params.push_back("joint_max_rad:=[3.0,3.0,3.0]");
+        params.push_back("camera_min_rad:=[-3.0,-3.0,-3.0]");
+        params.push_back("camera_max_rad:=[3.0,3.0,3.0]");
+
         init_ros(params);
     }
 
     void TearDown() override {
         stub_kinematics::ik_fails = false;
         stub_kinematics::ik_out_of_range = false;
-    }
-
-    void publish_camera_command() {
-        publish_camera_command(make_camera_command_msg()); /* default (valid) */
-    }
-
-    void publish_camera_command(const CameraOrientationCommand& msg) {
-        camera_pub_->publish(msg);
-    }
-
-    void publish_joint_state() {
-        publish_joint_state(make_joint_state_msg()); /* default (valid) */
-    }
-
-    void publish_joint_state(const JointState& msg) {
-        joint_state_pub_->publish(msg);
     }
 
     /**
@@ -105,41 +97,6 @@ class MotionControlFaultTest : public MotionControlTest {
     }
 
     /**
-     * Seeds the node with a valid joint state and waits until it publishes.
-     *
-     * Republishes joint state until the first joint command arrives, then clears
-     * joint_commands_received_ so later checks only see output from after seeding.
-     *
-     * @return The positions that were published, which the seeded joint command should now hold.
-     */
-    std::vector<double> seed_with_joint_state() {
-        const auto msg = make_joint_state_msg();
-        EXPECT_TRUE(spin_until([&] {
-            publish_joint_state(msg);
-            return !joint_commands_received_.empty();
-        }));
-        joint_commands_received_.clear();
-        return msg.position;
-    }
-
-    /**
-     * Checks that every joint command received so far still holds the expected positions.
-     * Fails if nothing has been received or if any command differs in size or value.
-     *
-     * @param expected Positions every received joint command must match.
-     */
-    void expect_joint_commands_unchanged(const std::vector<double>& expected) {
-        ASSERT_FALSE(joint_commands_received_.empty());
-
-        for (const auto& cmd : joint_commands_received_) {
-            ASSERT_EQ(cmd.position.size(), expected.size());
-            for (size_t i = 0; i < expected.size(); ++i) {
-                EXPECT_DOUBLE_EQ(cmd.position[i], expected[i]);
-            }
-        }
-    }
-
-    /**
      * Publishes once, watches for a fixed window, and expects no joint command to arrive.
      *
      * @param publish Callable that publishes the messages under test.
@@ -153,41 +110,30 @@ class MotionControlFaultTest : public MotionControlTest {
     }
 };
 
-/* Controls */
-TEST_F(MotionControlFaultTest, ValidCameraCommandMovesJointCommand) {
-    const auto seeded = seed_with_joint_state();
-
-    publish_camera_command(make_camera_command_msg());
-    spin_for(300ms);
-
-    ASSERT_FALSE(joint_commands_received_.empty());
-    EXPECT_NE(joint_commands_received_.back().position, seeded);
-}
-
 /* Single CameraOrientationCommand faults */
 TEST_F(MotionControlFaultTest, MistypedCameraCommandIsDropped) {
     GTEST_SKIP() << "[N/A] type mismatch is rejected by ROS2 pub/sub, never reaches the node";
 }
 
 TEST_F(MotionControlFaultTest, InvalidCameraCommandIsDroppedAndAlerts) {
-    const auto seeded = seed_with_joint_state();
+    const auto initial_state = seed_with_joint_state();
 
     auto msg = make_camera_command_msg(99.0);
     publish_camera_command(msg);
 
     spin_for_and_expect_alert(300ms);
-    expect_joint_commands_unchanged(seeded);
+    expect_all_joint_commands_to_equal(initial_state);
 }
 
 TEST_F(MotionControlFaultTest, TooOldCameraCommandIsDroppedAndAlerts) {
-    const auto seeded = seed_with_joint_state();
+    const auto initial_state = seed_with_joint_state();
 
     auto msg = make_camera_command_msg();
     msg.header.stamp = peer_node_->now() - rclcpp::Duration::from_seconds(10.0);
     publish_camera_command(msg);
 
     spin_for_and_expect_alert(300ms);
-    expect_joint_commands_unchanged(seeded);
+    expect_all_joint_commands_to_equal(initial_state);
 }
 
 TEST_F(MotionControlFaultTest, OutOfOrderCameraCommandIsDropped) {
@@ -205,14 +151,14 @@ TEST_F(MotionControlFaultTest, OutOfOrderCameraCommandIsDropped) {
         return cmd.header.stamp.sec == stamp.sec && cmd.header.stamp.nanosec == stamp.nanosec;
     };
 
-    /* younger command is accepted, so output carries its stamp */
+    /* Younger command is accepted, so output carries its stamp */
     ASSERT_TRUE(spin_until([&] {
         publish_camera_command(younger);
         return !joint_commands_received_.empty() &&
                has_stamp(joint_commands_received_.back(), younger.header.stamp);
     }));
 
-    /* older command is ignored, so output keeps the younger stamp */
+    /* Older command is ignored, so output keeps the younger stamp */
     joint_commands_received_.clear();
     publish_camera_command(older);
     spin_for(300ms);
@@ -226,23 +172,23 @@ TEST_F(MotionControlFaultTest, OutOfOrderCameraCommandIsDropped) {
 
 /* Single kinematics library faults */
 TEST_F(MotionControlFaultTest, ValidCameraCommandButFailedKinematicsIsDroppedAndAlerts) {
-    const auto seeded = seed_with_joint_state();
+    const auto initial_state = seed_with_joint_state();
 
     stub_kinematics::ik_fails = true;
-    publish_camera_command(make_camera_command_msg());
+    publish_camera_command();
 
     spin_for_and_expect_alert(300ms);
-    expect_joint_commands_unchanged(seeded);
+    expect_all_joint_commands_to_equal(initial_state);
 }
 
 TEST_F(MotionControlFaultTest, ValidCameraCommandButInvalidKinematicsIsDroppedAndAlerts) {
-    const auto seeded = seed_with_joint_state();
+    const auto initial_state = seed_with_joint_state();
 
     stub_kinematics::ik_out_of_range = true;
-    publish_camera_command(make_camera_command_msg());
+    publish_camera_command();
 
     spin_for_and_expect_alert(300ms);
-    expect_joint_commands_unchanged(seeded);
+    expect_all_joint_commands_to_equal(initial_state);
 }
 
 /* Single JointState faults */
@@ -309,7 +255,7 @@ TEST_F(MotionControlFaultTest, GoodJointStateStreakExitsHold) {
         publish_joint_state(msg);
     };
 
-    auto publish_good_msg = [this] { publish_joint_state(make_joint_state_msg()); };
+    auto publish_good_msg = [this] { publish_joint_state(); };
 
     /* Bad streak timer running, not in hold yet */
     spin_for_while(300ms, publish_bad_msg);
