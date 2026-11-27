@@ -255,7 +255,7 @@ TEST_F(MotionControlFaultTest, GoodJointStateStreakExitsHold) {
         publish_joint_state(msg);
     };
 
-    auto publish_good_msg = [this] { publish_joint_state(make_joint_state_msg()); };
+    auto publish_good_msg = [this] { publish_joint_state(); };
 
     /* Bad streak timer running, not in hold yet */
     spin_for_while(300ms, publish_bad_msg);
