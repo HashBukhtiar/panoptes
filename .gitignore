@@ -16,6 +16,9 @@ logs/
 *.pt
 *.onnx
 
+# Offline speech model for voice commands (AI-1): downloaded, about 68 MB
+vosk-model-*/
+
 # DI-22: keep video out of git (it may show people)
 *.mp4
 *.avi

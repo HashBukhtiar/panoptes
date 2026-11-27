@@ -24,6 +24,7 @@ def frames(source):
             fps = cap.get(cv2.CAP_PROP_FPS)
             period = 1.0 / fps if fps > 0 else 0.0
             next_due = time.monotonic()
+        n = 0
         while True:
             if is_file:
                 delay = next_due - time.monotonic()
@@ -32,13 +33,19 @@ def frames(source):
                 next_due = max(next_due, time.monotonic()) + period
             # A webcam needs no pacing: grab() waits for its next frame.
             if not cap.grab():
-                return
+                break
             # ponytail: host time when the frame arrived, not exposure time; use the ZED SDK's
             # image timestamp once camera-driver exists.
             stamp_ns = time.time_ns()
             ok, image = cap.retrieve()
             if not ok:
-                return
+                break
+            n += 1
             yield stamp_ns, image
+        if not is_file:  # a file ending is normal; a webcam never ends on its own
+            raise RuntimeError(
+                f"Camera {source} stopped giving frames after {n} frame(s). Another app may be using it, "
+                f"or index {source} is now a different camera (e.g. an iPhone via Continuity Camera): "
+                "try --source 1.")
     finally:
         cap.release()

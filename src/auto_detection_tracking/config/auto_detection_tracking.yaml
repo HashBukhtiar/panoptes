@@ -6,10 +6,12 @@ auto_detection_tracking:
     stand_ins:
       model: "yolo26n.pt" # pretrained COCO model (ADT-3), downloaded on first run
       classes: ["fork", "spoon", "knife"]
+      spoken: ["fork", "spoon", "knife"] # what to say after "track" for each class, in the same order (AI-1)
       imgsz: 640 # model input size
     instruments:
       model: "instruments-public-v1.pt" # YOLO26n fine-tuned on public data only (ADT-5); not in git, see README "Models"
       classes: ["syringe", "adson_forceps", "needle_driver"]
+      spoken: ["syringe", "forceps", "needle driver"]
       imgsz: 1280 # the instruments are small in frame; 1280 finds more of them (15 ms vs 9.5 ms per frame, Nov 24)
     min_score: 0.25 # detections scoring below this are dropped
     acquire_score: 0.5 # min score to start tracking a target (following uses min_score); placeholder, tune in ADT-10
@@ -18,3 +20,5 @@ auto_detection_tracking:
 
     hfov_deg: 53.9 # MacBook webcam horizontal field of view, measured Nov 17: 30.5 in visible at 30 in away (2*atan(W/2D))
     centred_deg: 5.0 # off-centre angle that counts as centred (DI-7)
+
+    voice_model: "vosk-model-small-en-us-0.15" # offline speech model folder for voice commands (AI-1); not in git, see README "Voice"; "" turns voice off

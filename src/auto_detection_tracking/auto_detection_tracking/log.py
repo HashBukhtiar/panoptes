@@ -7,7 +7,7 @@ from pathlib import Path
 from auto_detection_tracking.pointing import off_centre
 
 FIELDS = ["stamp_ns", "latency_ms", "selected", "state", "target_label", "target_score",
-          "target_box", "yaw_deg", "pitch_deg", "off_centre_deg", "detections"]
+          "target_box", "yaw_deg", "pitch_deg", "off_centre_deg", "detections", "command", "command_ns"]
 
 
 def open_log(path):
@@ -19,8 +19,10 @@ def open_log(path):
     return file, writer
 
 
-def frame_row(stamp_ns, latency_ms, selected, state, target, angles, detections):
+def frame_row(stamp_ns, latency_ms, selected, state, target, angles, detections, command=None):
     """One row. target is (label, score, box) or None; angles is (yaw, pitch) in radians or None.
+    command is (what, given_ns) on the first frame after a selection command, e.g. ("key 5", ns) or
+    ("voice: track forceps", ns), where given_ns is the key press or the end of speech (DI-7 timing).
 
     Columns left out of the dict are written blank.
     """
@@ -34,4 +36,6 @@ def frame_row(stamp_ns, latency_ms, selected, state, target, angles, detections)
         yaw, pitch = angles
         row.update(yaw_deg=round(math.degrees(yaw), 2), pitch_deg=round(math.degrees(pitch), 2),
                    off_centre_deg=round(math.degrees(off_centre(yaw, pitch)), 2))
+    if command:
+        row.update(command=command[0], command_ns=command[1])
     return row
